@@ -1,0 +1,548 @@
+import useSWR from 'swr'
+import { useEffect, useState } from 'react'
+import Router from 'next/router'
+import Layout from '../components/Layout'
+import AnalyticsCharts from '../components/AnalyticsCharts'
+import EnhancedAnalyticsCharts from '../components/EnhancedAnalyticsCharts'
+import AnalyticsDashboard from '../components/AnalyticsDashboard'
+import PerformanceMonitor from '../components/PerformanceMonitor'
+import RealTimeNotifications from '../components/RealTimeNotifications'
+import MonitoringStatus from '../components/MonitoringStatus'
+import ResponseManager from '../components/ResponseManager'
+import SearchAndFilter from '../components/SearchAndFilter'
+import MobileResponsiveLayout from '../components/MobileResponsiveLayout'
+import { WebSocketProvider, useWebSocket } from '../components/WebSocketProvider'
+import { API_BASE } from '../utils/apiBase'
+
+const API = API_BASE
+
+const fetcher = async (url: string, token: string) => {
+  const response = await fetch(url, { 
+    headers: { 
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    } 
+  })
+  
+  if (!response.ok) {
+    if (response.status === 401) {
+      // Token expired or invalid, redirect to login
+      localStorage.removeItem('token')
+      Router.replace('/')
+      throw new Error('Unauthorized')
+    }
+    throw new Error(`HTTP error! status: ${response.status}`)
+  }
+  
+  return response.json()
+}
+
+function DashboardContent() {
+  const [token, setToken] = useState<string | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [filteredPosts, setFilteredPosts] = useState<any[]>([])
+  const [availableSubreddits, setAvailableSubreddits] = useState<string[]>([])
+  const [viewMode, setViewMode] = useState<'enhanced' | 'classic' | 'dashboard'>('dashboard')
+  const [performanceMonitorEnabled, setPerformanceMonitorEnabled] = useState(false)
+  const { lastMessage } = useWebSocket()
+  
+  useEffect(() => {
+    // Check if we're in browser before accessing localStorage
+    if (typeof window !== 'undefined') {
+      const t = localStorage.getItem('token')
+      setToken(t)
+      if (!t) {
+        Router.replace('/')
+      }
+    }
+    setIsLoading(false)
+  }, [])
+
+  const { data: posts, error: postsError, mutate: mutatePosts } = useSWR(
+    token ? [`${API}/api/posts`, token] : null, 
+    ([url, t]) => fetcher(url, t),
+    { 
+      revalidateOnFocus: false,
+      revalidateOnReconnect: true,
+      errorRetryCount: 3
+    }
+  )
+
+  const { data: summary, error: summaryError, mutate: mutateSummary } = useSWR(
+    token ? [`${API}/api/analytics/summary`, token] : null, 
+    ([url, t]) => fetcher(url, t),
+    { 
+      revalidateOnFocus: false,
+      revalidateOnReconnect: true,
+      errorRetryCount: 3
+    }
+  )
+
+  // Handle real-time updates
+  useEffect(() => {
+    if (lastMessage) {
+      if (lastMessage.type === 'new_post' || lastMessage.type === 'new_response') {
+        mutatePosts() // Refresh posts data
+        mutateSummary() // Refresh summary data
+      } else if (lastMessage.type === 'analytics_update') {
+        mutateSummary() // Refresh analytics
+      }
+    }
+  }, [lastMessage, mutatePosts, mutateSummary])
+
+  // Extract available subreddits from posts
+  useEffect(() => {
+    if (posts && Array.isArray(posts)) {
+      const subreddits = [...new Set(posts.map((p: any) => p.subreddit).filter(Boolean))]
+      setAvailableSubreddits(subreddits)
+      setFilteredPosts(posts)
+    }
+  }, [posts])
+
+  // Filter posts based on search and filter criteria
+  const handleFilterChange = (filters: any) => {
+    if (!posts || !Array.isArray(posts)) return
+
+    let filtered = [...posts]
+
+    // Search query filter
+    if (filters.searchQuery) {
+      const query = filters.searchQuery.toLowerCase()
+      filtered = filtered.filter(post => 
+        post.title?.toLowerCase().includes(query) ||
+        post.content?.toLowerCase().includes(query) ||
+        post.keywords_matched?.toLowerCase().includes(query)
+      )
+    }
+
+    // Subreddit filter
+    if (filters.subreddit) {
+      filtered = filtered.filter(post => post.subreddit === filters.subreddit)
+    }
+
+    // Date range filter
+    if (filters.dateRange !== 'all') {
+      const now = new Date()
+      const filterDate = new Date()
+      
+      switch (filters.dateRange) {
+        case 'today':
+          filterDate.setHours(0, 0, 0, 0)
+          break
+        case 'week':
+          filterDate.setDate(now.getDate() - 7)
+          break
+        case 'month':
+          filterDate.setMonth(now.getMonth() - 1)
+          break
+        case 'quarter':
+          filterDate.setMonth(now.getMonth() - 3)
+          break
+      }
+      
+      filtered = filtered.filter(post => 
+        new Date(post.created_at) >= filterDate
+      )
+    }
+
+    // Response status filter
+    if (filters.responseStatus !== 'all') {
+      switch (filters.responseStatus) {
+        case 'with_responses':
+          filtered = filtered.filter(post => post.responses && post.responses.length > 0)
+          break
+        case 'without_responses':
+          filtered = filtered.filter(post => !post.responses || post.responses.length === 0)
+          break
+        case 'copied':
+          filtered = filtered.filter(post => 
+            post.responses && post.responses.some((r: any) => r.copied)
+          )
+          break
+        case 'high_score':
+          filtered = filtered.filter(post => 
+            post.responses && post.responses.some((r: any) => r.score >= 80)
+          )
+          break
+      }
+    }
+
+    // Score range filter
+    if (filters.scoreRange[0] > 0 || filters.scoreRange[1] < 100) {
+      filtered = filtered.filter(post => {
+        if (!post.responses || post.responses.length === 0) return false
+        const maxScore = Math.max(...post.responses.map((r: any) => r.score || 0))
+        return maxScore >= filters.scoreRange[0] && maxScore <= filters.scoreRange[1]
+      })
+    }
+
+    // Sorting
+    filtered.sort((a, b) => {
+      let aValue, bValue
+      
+      switch (filters.sortBy) {
+        case 'score':
+          aValue = a.score || 0
+          bValue = b.score || 0
+          break
+        case 'response_score':
+          aValue = a.responses ? Math.max(...a.responses.map((r: any) => r.score || 0)) : 0
+          bValue = b.responses ? Math.max(...b.responses.map((r: any) => r.score || 0)) : 0
+          break
+        case 'subreddit':
+          aValue = a.subreddit || ''
+          bValue = b.subreddit || ''
+          break
+        case 'title':
+          aValue = a.title || ''
+          bValue = b.title || ''
+          break
+        default: // created_at
+          aValue = new Date(a.created_at).getTime()
+          bValue = new Date(b.created_at).getTime()
+      }
+
+      if (filters.sortOrder === 'asc') {
+        return aValue > bValue ? 1 : -1
+      } else {
+        return aValue < bValue ? 1 : -1
+      }
+    })
+
+    setFilteredPosts(filtered)
+  }
+
+  const handleResponseUpdate = (responseId: number, updatedResponse: any) => {
+    // Update the posts data with the new response
+    mutatePosts()
+  }
+
+  const { data: trends, error: trendsError } = useSWR(
+    token ? [`${API}/api/analytics/trends`, token] : null, 
+    ([url, t]) => fetcher(url, t),
+    { 
+      revalidateOnFocus: false,
+      revalidateOnReconnect: true,
+      errorRetryCount: 3
+    }
+  )
+
+  const { data: keywordInsights, error: keywordError } = useSWR(
+    token ? [`${API}/api/analytics/keywords`, token] : null, 
+    ([url, t]) => fetcher(url, t),
+    { 
+      revalidateOnFocus: false,
+      revalidateOnReconnect: true,
+      errorRetryCount: 3
+    }
+  )
+  const scan = async () => {
+    try {
+      const response = await fetch(`${API}/api/ops/scan`, { 
+        method: 'POST', 
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        } 
+      })
+      if (response.ok) {
+        alert('Scan enqueued')
+      } else {
+        alert('Failed to start scan')
+      }
+    } catch (error) {
+      console.error('Scan error:', error)
+      alert('Error starting scan')
+    }
+  }
+
+  // Safe data handling with proper null checks
+  const eventsTotal: number | string = summary?.events
+    ? Object.values(summary.events as Record<string, number>).reduce((a: number, b: any) => a + Number(b), 0)
+    : '—'
+
+  const copy = async (id: number, content: string) => {
+    try {
+      await navigator.clipboard.writeText(content)
+      await fetch(`${API}/api/posts/responses/${id}/copied`, { 
+        method: 'POST', 
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        } 
+      })
+    } catch (error) {
+      console.error('Copy error:', error)
+    }
+  }
+  
+  const ack = async (id: number) => {
+    try {
+      await fetch(`${API}/api/posts/responses/${id}/compliance`, { 
+        method: 'POST', 
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        } 
+      })
+    } catch (error) {
+      console.error('Ack error:', error)
+    }
+  }
+
+  // Show loading state to prevent hydration mismatch
+  if (isLoading || !token) {
+    return (
+      <Layout>
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto"></div>
+            <p className="mt-4 text-gray-600">Loading...</p>
+          </div>
+        </div>
+      </Layout>
+    )
+  }
+
+  return (
+    <MobileResponsiveLayout>
+      <RealTimeNotifications />
+      
+      {/* System Monitoring Status */}
+      <MonitoringStatus className="mb-6" />
+      
+      <div className="grid gap-4 grid-cols-1 md:grid-cols-4">
+        <div className="bg-white border rounded-xl p-4 shadow-sm">
+          <div className="text-sm text-gray-500">Posts</div>
+          <div className="text-2xl font-semibold">{summary?.posts ?? '—'}</div>
+        </div>
+        <div className="bg-white border rounded-xl p-4 shadow-sm">
+          <div className="text-sm text-gray-500">Responses</div>
+          <div className="text-2xl font-semibold">{summary?.responses ?? '—'}</div>
+        </div>
+        <div className="bg-white border rounded-xl p-4 shadow-sm">
+          <div className="text-sm text-gray-500">Copy Rate</div>
+          <div className="text-2xl font-semibold">{summary?.copy_rate ?? '—'}%</div>
+        </div>
+        <div className="bg-white border rounded-xl p-4 shadow-sm">
+          <div className="text-sm text-gray-500">Growth</div>
+          <div className="text-2xl font-semibold">
+            {trends?.growth_rate ? (
+              <span className={trends.growth_rate >= 0 ? 'text-green-600' : 'text-red-600'}>
+                {trends.growth_rate > 0 ? '+' : ''}{trends.growth_rate}%
+              </span>
+            ) : '—'}
+          </div>
+        </div>
+      </div>
+
+      {/* Analytics Charts */}
+      <div className="mt-8 mb-8">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-4 space-y-2 md:space-y-0">
+          <h2 className="text-lg font-semibold">Analytics Overview</h2>
+          <div className="flex items-center space-x-2">
+            <button
+              onClick={() => setViewMode('classic')}
+              className={`px-3 py-1 text-sm rounded transition-colors ${
+                viewMode === 'classic' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+              }`}
+            >
+              Classic
+            </button>
+            <button
+              onClick={() => setViewMode('enhanced')}
+              className={`px-3 py-1 text-sm rounded transition-colors ${
+                viewMode === 'enhanced' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+              }`}
+            >
+              Enhanced
+            </button>
+            <button
+              onClick={() => setViewMode('dashboard')}
+              className={`px-3 py-1 text-sm rounded transition-colors ${
+                viewMode === 'dashboard' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+              }`}
+            >
+              Dashboard
+            </button>
+            <div className="border-l pl-2 ml-2">
+              <button
+                onClick={() => setPerformanceMonitorEnabled(!performanceMonitorEnabled)}
+                className={`px-2 py-1 text-xs rounded transition-colors ${
+                  performanceMonitorEnabled ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+                title="Toggle performance monitoring"
+              >
+                {performanceMonitorEnabled ? 'Perf ON' : 'Perf OFF'}
+              </button>
+            </div>
+          </div>
+        </div>
+        
+        {viewMode === 'dashboard' ? (
+          <AnalyticsDashboard token={token!} />
+        ) : viewMode === 'enhanced' ? (
+          <EnhancedAnalyticsCharts data={summary} />
+        ) : (
+          <AnalyticsCharts data={summary} />
+        )}
+      </div>
+
+      {/* Keyword Insights */}
+      {keywordInsights && keywordInsights.length > 0 && (
+        <div className="mt-8 mb-8">
+          <h2 className="text-lg font-semibold mb-4">Keyword Performance</h2>
+          <div className="bg-white border rounded-xl p-6 shadow-sm">
+            <div className="space-y-4">
+              {keywordInsights.slice(0, 5).map((insight: any, index: number) => (
+                <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <div>
+                    <span className="font-medium">{insight.keyword}</span>
+                    <div className="text-sm text-gray-600">
+                      {insight.matches} matches • {insight.avg_engagement} avg engagement
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                      insight.category === 'high_performer' ? 'bg-green-100 text-green-800' :
+                      insight.category === 'moderate_performer' ? 'bg-yellow-100 text-yellow-800' :
+                      'bg-red-100 text-red-800'
+                    }`}>
+                      {insight.category.replace('_', ' ')}
+                    </div>
+                    <div className="text-xs text-gray-500 mt-1">{insight.response_rate}% response rate</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Search and Filter */}
+      <div className="mt-8 mb-6">
+        <SearchAndFilter 
+          onFilterChange={handleFilterChange}
+          subreddits={availableSubreddits}
+        />
+      </div>
+
+      <div className="mb-3 flex items-center justify-between">
+        <div>
+          <h2 className="text-lg font-semibold">Matched Posts</h2>
+          <p className="text-sm text-gray-600">
+            Showing {filteredPosts.length} of {posts?.length || 0} posts
+          </p>
+        </div>
+        <button onClick={scan} className="px-3 py-2 rounded-md bg-black text-white hover:bg-gray-800 transition-colors">
+          Scan now
+        </button>
+      </div>
+      
+      {/* Error handling */}
+      {(postsError || summaryError) && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+          <p className="text-red-600">
+            Error loading data: {postsError?.message || summaryError?.message}
+          </p>
+        </div>
+      )}
+      
+      {/* Posts loading state */}
+      {!posts && !postsError && (
+        <div className="text-center py-8">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
+          <p className="mt-2 text-gray-600">Loading posts...</p>
+        </div>
+      )}
+      
+      {/* Posts content */}
+      {filteredPosts.length === 0 && posts && Array.isArray(posts) && posts.length > 0 && (
+        <div className="text-center py-8">
+          <p className="text-gray-500">No posts match your current filters.</p>
+        </div>
+      )}
+
+      {posts && Array.isArray(posts) && posts.length === 0 && (
+        <div className="text-center py-8">
+          <p className="text-gray-500">No posts yet. Click "Scan now" to start monitoring.</p>
+        </div>
+      )}
+      
+      {filteredPosts.length > 0 && (
+        <div className="space-y-3">
+          {filteredPosts.map((p: any) => {
+            const redditUrl = p?.subreddit && p?.reddit_post_id
+              ? `https://www.reddit.com/r/${p.subreddit}/comments/${p.reddit_post_id}`
+              : (p?.url || '#')
+            return (
+              <div key={p.id} className="bg-white border rounded-xl p-4 shadow-sm">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="text-sm text-gray-500">
+                    <span className="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-gray-700">r/{p.subreddit || 'unknown'}</span>
+                  </div>
+                  <a
+                    href={redditUrl}
+                    target="_blank"
+                    rel="noreferrer noopener"
+                    className="shrink-0 inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs hover:bg-gray-50"
+                    aria-label="Open on Reddit"
+                  >
+                    Open on Reddit
+                    <span aria-hidden>↗</span>
+                  </a>
+                </div>
+                <a 
+                  className="mt-2 block text-lg font-semibold text-gray-900 hover:underline"
+                  href={redditUrl}
+                  target="_blank"
+                  rel="noreferrer noopener"
+                >
+                  {p.title || 'No title'}
+                </a>
+                <div className="text-sm text-gray-600">
+                  Keywords: {p.keywords_matched || 'None'}
+                </div>
+                <div className="mt-3">
+                  <div className="text-sm font-medium mb-1">AI Responses</div>
+                  {Array.isArray(p.responses) && p.responses.length > 0 ? (
+                    <ResponseManager 
+                      responses={p.responses}
+                      token={token!}
+                      onResponseUpdate={handleResponseUpdate}
+                    />
+                  ) : (
+                    <p className="text-sm text-gray-500 italic py-4">No responses generated yet</p>
+                  )}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      {/* Performance Monitor */}
+      <PerformanceMonitor 
+        enabled={performanceMonitorEnabled}
+        maxDataPoints={1000}
+      />
+    </MobileResponsiveLayout>
+  )
+}
+
+export default function Dashboard() {
+  const [token, setToken] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const t = localStorage.getItem('token')
+      setToken(t)
+    }
+  }, [])
+
+  return (
+    <WebSocketProvider token={token}>
+      <DashboardContent />
+    </WebSocketProvider>
+  )
+}

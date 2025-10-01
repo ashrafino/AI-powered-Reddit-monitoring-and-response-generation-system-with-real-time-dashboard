@@ -1,0 +1,261 @@
+INFO:     Will watch for changes in these directories: ['/Users/macbook/Documents/REDDIT BOT']
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+INFO:     Started reloader process [3189] using StatReload
+INFO:     Started server process [3209]
+INFO:     Waiting for application startup.
+2025-09-30 15:48:16,715 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2025-09-30 15:48:16,715 INFO sqlalchemy.engine.Engine PRAGMA main.table_info("clients")
+2025-09-30 15:48:16,715 INFO sqlalchemy.engine.Engine [raw sql] ()
+2025-09-30 15:48:16,717 INFO sqlalchemy.engine.Engine PRAGMA temp.table_info("clients")
+2025-09-30 15:48:16,717 INFO sqlalchemy.engine.Engine [raw sql] ()
+2025-09-30 15:48:16,717 INFO sqlalchemy.engine.Engine PRAGMA main.table_info("client_configs")
+2025-09-30 15:48:16,717 INFO sqlalchemy.engine.Engine [raw sql] ()
+2025-09-30 15:48:16,717 INFO sqlalchemy.engine.Engine PRAGMA temp.table_info("client_configs")
+2025-09-30 15:48:16,718 INFO sqlalchemy.engine.Engine [raw sql] ()
+2025-09-30 15:48:16,718 INFO sqlalchemy.engine.Engine PRAGMA main.table_info("users")
+2025-09-30 15:48:16,718 INFO sqlalchemy.engine.Engine [raw sql] ()
+2025-09-30 15:48:16,719 INFO sqlalchemy.engine.Engine PRAGMA temp.table_info("users")
+2025-09-30 15:48:16,719 INFO sqlalchemy.engine.Engine [raw sql] ()
+2025-09-30 15:48:16,719 INFO sqlalchemy.engine.Engine PRAGMA main.table_info("matched_posts")
+2025-09-30 15:48:16,719 INFO sqlalchemy.engine.Engine [raw sql] ()
+2025-09-30 15:48:16,719 INFO sqlalchemy.engine.Engine PRAGMA temp.table_info("matched_posts")
+2025-09-30 15:48:16,719 INFO sqlalchemy.engine.Engine [raw sql] ()
+2025-09-30 15:48:16,719 INFO sqlalchemy.engine.Engine PRAGMA main.table_info("ai_responses")
+2025-09-30 15:48:16,719 INFO sqlalchemy.engine.Engine [raw sql] ()
+2025-09-30 15:48:16,720 INFO sqlalchemy.engine.Engine PRAGMA temp.table_info("ai_responses")
+2025-09-30 15:48:16,720 INFO sqlalchemy.engine.Engine [raw sql] ()
+2025-09-30 15:48:16,720 INFO sqlalchemy.engine.Engine PRAGMA main.table_info("analytics_events")
+2025-09-30 15:48:16,720 INFO sqlalchemy.engine.Engine [raw sql] ()
+2025-09-30 15:48:16,720 INFO sqlalchemy.engine.Engine PRAGMA temp.table_info("analytics_events")
+2025-09-30 15:48:16,720 INFO sqlalchemy.engine.Engine [raw sql] ()
+2025-09-30 15:48:16,722 INFO sqlalchemy.engine.Engine 
+CREATE TABLE clients (
+	id INTEGER NOT NULL, 
+	name VARCHAR(255) NOT NULL, 
+	slug VARCHAR(255) NOT NULL, 
+	created_at DATETIME DEFAULT (CURRENT_TIMESTAMP), 
+	updated_at DATETIME DEFAULT (CURRENT_TIMESTAMP), 
+	PRIMARY KEY (id), 
+	UNIQUE (name), 
+	UNIQUE (slug)
+)
+
+
+2025-09-30 15:48:16,722 INFO sqlalchemy.engine.Engine [no key 0.00016s] ()
+2025-09-30 15:48:16,725 INFO sqlalchemy.engine.Engine CREATE INDEX ix_clients_id ON clients (id)
+2025-09-30 15:48:16,726 INFO sqlalchemy.engine.Engine [no key 0.00123s] ()
+2025-09-30 15:48:16,730 INFO sqlalchemy.engine.Engine 
+CREATE TABLE client_configs (
+	id INTEGER NOT NULL, 
+	client_id INTEGER NOT NULL, 
+	reddit_username VARCHAR(255), 
+	reddit_subreddits VARCHAR(2000), 
+	keywords VARCHAR(2000), 
+	is_active BOOLEAN, 
+	created_at DATETIME DEFAULT (CURRENT_TIMESTAMP), 
+	updated_at DATETIME DEFAULT (CURRENT_TIMESTAMP), 
+	PRIMARY KEY (id), 
+	FOREIGN KEY(client_id) REFERENCES clients (id) ON DELETE CASCADE
+)
+
+
+2025-09-30 15:48:16,730 INFO sqlalchemy.engine.Engine [no key 0.00028s] ()
+2025-09-30 15:48:16,732 INFO sqlalchemy.engine.Engine CREATE INDEX ix_client_configs_client_id ON client_configs (client_id)
+2025-09-30 15:48:16,732 INFO sqlalchemy.engine.Engine [no key 0.00030s] ()
+2025-09-30 15:48:16,735 INFO sqlalchemy.engine.Engine 
+CREATE TABLE users (
+	id INTEGER NOT NULL, 
+	email VARCHAR(255) NOT NULL, 
+	hashed_password VARCHAR(255) NOT NULL, 
+	is_active BOOLEAN, 
+	role VARCHAR(50), 
+	client_id INTEGER, 
+	created_at DATETIME DEFAULT (CURRENT_TIMESTAMP), 
+	updated_at DATETIME DEFAULT (CURRENT_TIMESTAMP), 
+	PRIMARY KEY (id), 
+	FOREIGN KEY(client_id) REFERENCES clients (id) ON DELETE SET NULL
+)
+
+
+2025-09-30 15:48:16,735 INFO sqlalchemy.engine.Engine [no key 0.00022s] ()
+2025-09-30 15:48:16,737 INFO sqlalchemy.engine.Engine CREATE UNIQUE INDEX ix_users_email ON users (email)
+2025-09-30 15:48:16,737 INFO sqlalchemy.engine.Engine [no key 0.00021s] ()
+2025-09-30 15:48:16,739 INFO sqlalchemy.engine.Engine CREATE INDEX ix_users_id ON users (id)
+2025-09-30 15:48:16,739 INFO sqlalchemy.engine.Engine [no key 0.00014s] ()
+2025-09-30 15:48:16,745 INFO sqlalchemy.engine.Engine 
+CREATE TABLE matched_posts (
+	id INTEGER NOT NULL, 
+	client_id INTEGER NOT NULL, 
+	subreddit VARCHAR(255), 
+	reddit_post_id VARCHAR(50), 
+	title VARCHAR(1000), 
+	url VARCHAR(1000), 
+	author VARCHAR(255), 
+	content TEXT, 
+	keywords_matched VARCHAR(1000), 
+	score INTEGER, 
+	num_comments INTEGER, 
+	flagged BOOLEAN, 
+	reviewed BOOLEAN, 
+	created_at DATETIME DEFAULT (CURRENT_TIMESTAMP), 
+	updated_at DATETIME DEFAULT (CURRENT_TIMESTAMP), 
+	PRIMARY KEY (id), 
+	FOREIGN KEY(client_id) REFERENCES clients (id) ON DELETE CASCADE
+)
+
+
+2025-09-30 15:48:16,745 INFO sqlalchemy.engine.Engine [no key 0.00028s] ()
+2025-09-30 15:48:16,749 INFO sqlalchemy.engine.Engine CREATE INDEX ix_matched_posts_subreddit ON matched_posts (subreddit)
+2025-09-30 15:48:16,749 INFO sqlalchemy.engine.Engine [no key 0.00022s] ()
+2025-09-30 15:48:16,751 INFO sqlalchemy.engine.Engine CREATE UNIQUE INDEX ix_matched_posts_reddit_post_id ON matched_posts (reddit_post_id)
+2025-09-30 15:48:16,751 INFO sqlalchemy.engine.Engine [no key 0.00013s] ()
+2025-09-30 15:48:16,752 INFO sqlalchemy.engine.Engine CREATE INDEX idx_subreddit_created ON matched_posts (subreddit, created_at)
+2025-09-30 15:48:16,752 INFO sqlalchemy.engine.Engine [no key 0.00009s] ()
+2025-09-30 15:48:16,753 INFO sqlalchemy.engine.Engine CREATE INDEX ix_matched_posts_client_id ON matched_posts (client_id)
+2025-09-30 15:48:16,753 INFO sqlalchemy.engine.Engine [no key 0.00012s] ()
+2025-09-30 15:48:16,755 INFO sqlalchemy.engine.Engine CREATE INDEX idx_client_created ON matched_posts (client_id, created_at)
+2025-09-30 15:48:16,755 INFO sqlalchemy.engine.Engine [no key 0.00019s] ()
+2025-09-30 15:48:16,757 INFO sqlalchemy.engine.Engine CREATE INDEX idx_client_reviewed ON matched_posts (client_id, reviewed)
+2025-09-30 15:48:16,758 INFO sqlalchemy.engine.Engine [no key 0.00023s] ()
+2025-09-30 15:48:16,762 INFO sqlalchemy.engine.Engine 
+CREATE TABLE analytics_events (
+	id INTEGER NOT NULL, 
+	client_id INTEGER NOT NULL, 
+	event_type VARCHAR(100), 
+	data JSON, 
+	created_at DATETIME DEFAULT (CURRENT_TIMESTAMP), 
+	PRIMARY KEY (id), 
+	FOREIGN KEY(client_id) REFERENCES clients (id) ON DELETE CASCADE
+)
+
+
+2025-09-30 15:48:16,762 INFO sqlalchemy.engine.Engine [no key 0.00028s] ()
+2025-09-30 15:48:16,764 INFO sqlalchemy.engine.Engine CREATE INDEX ix_analytics_events_client_id ON analytics_events (client_id)
+2025-09-30 15:48:16,764 INFO sqlalchemy.engine.Engine [no key 0.00014s] ()
+2025-09-30 15:48:16,766 INFO sqlalchemy.engine.Engine CREATE INDEX ix_analytics_events_event_type ON analytics_events (event_type)
+2025-09-30 15:48:16,766 INFO sqlalchemy.engine.Engine [no key 0.00024s] ()
+2025-09-30 15:48:16,771 INFO sqlalchemy.engine.Engine 
+CREATE TABLE ai_responses (
+	id INTEGER NOT NULL, 
+	post_id INTEGER NOT NULL, 
+	client_id INTEGER NOT NULL, 
+	content TEXT, 
+	score INTEGER, 
+	copied BOOLEAN, 
+	compliance_ack BOOLEAN, 
+	created_at DATETIME DEFAULT (CURRENT_TIMESTAMP), 
+	PRIMARY KEY (id), 
+	FOREIGN KEY(post_id) REFERENCES matched_posts (id) ON DELETE CASCADE, 
+	FOREIGN KEY(client_id) REFERENCES clients (id) ON DELETE CASCADE
+)
+
+
+2025-09-30 15:48:16,772 INFO sqlalchemy.engine.Engine [no key 0.00025s] ()
+2025-09-30 15:48:16,773 INFO sqlalchemy.engine.Engine CREATE INDEX ix_ai_responses_client_id ON ai_responses (client_id)
+2025-09-30 15:48:16,774 INFO sqlalchemy.engine.Engine [no key 0.00019s] ()
+2025-09-30 15:48:16,775 INFO sqlalchemy.engine.Engine CREATE INDEX ix_ai_responses_post_id ON ai_responses (post_id)
+2025-09-30 15:48:16,775 INFO sqlalchemy.engine.Engine [no key 0.00019s] ()
+2025-09-30 15:48:16,778 INFO sqlalchemy.engine.Engine COMMIT
+INFO:     Application startup complete.
+INFO:     127.0.0.1:58714 - "GET /api/health HTTP/1.1" 307 Temporary Redirect
+INFO:     127.0.0.1:58717 - "GET /api/posts HTTP/1.1" 307 Temporary Redirect
+2025-09-30 16:07:59,312 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2025-09-30 16:07:59,321 INFO sqlalchemy.engine.Engine SELECT users.id AS users_id, users.email AS users_email, users.hashed_password AS users_hashed_password, users.is_active AS users_is_active, users.role AS users_role, users.client_id AS users_client_id, users.created_at AS users_created_at, users.updated_at AS users_updated_at 
+FROM users 
+WHERE users.email = ?
+ LIMIT ? OFFSET ?
+2025-09-30 16:07:59,322 INFO sqlalchemy.engine.Engine [generated in 0.00140s] ('admin@example.com', 1, 0)
+2025-09-30 16:07:59,327 INFO sqlalchemy.engine.Engine SELECT clients.id AS clients_id, clients.name AS clients_name, clients.slug AS clients_slug, clients.created_at AS clients_created_at, clients.updated_at AS clients_updated_at 
+FROM clients 
+WHERE clients.slug = ?
+ LIMIT ? OFFSET ?
+2025-09-30 16:07:59,327 INFO sqlalchemy.engine.Engine [generated in 0.00021s] ('demo', 1, 0)
+2025-09-30 16:07:59,330 INFO sqlalchemy.engine.Engine INSERT INTO clients (name, slug) VALUES (?, ?) RETURNING id, created_at, updated_at
+2025-09-30 16:07:59,330 INFO sqlalchemy.engine.Engine [generated in 0.00022s] ('Demo', 'demo')
+(trapped) error reading bcrypt version
+Traceback (most recent call last):
+  File "/Users/macbook/Documents/REDDIT BOT/.venv/lib/python3.13/site-packages/passlib/handlers/bcrypt.py", line 620, in _load_backend_mixin
+    version = _bcrypt.__about__.__version__
+              ^^^^^^^^^^^^^^^^^
+AttributeError: module 'bcrypt' has no attribute '__about__'
+2025-09-30 16:08:00,077 INFO sqlalchemy.engine.Engine INSERT INTO users (email, hashed_password, is_active, role, client_id) VALUES (?, ?, ?, ?, ?) RETURNING id, created_at, updated_at
+2025-09-30 16:08:00,077 INFO sqlalchemy.engine.Engine [generated in 0.00046s] ('admin@example.com', '$2b$12$YwXdYvvmrFr8MIr6rCz4ouHzMMhubBm8mAUgwohsymjsYEvYlGq8a', 1, 'admin', 1)
+2025-09-30 16:08:00,078 INFO sqlalchemy.engine.Engine COMMIT
+2025-09-30 16:08:00,086 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2025-09-30 16:08:00,087 INFO sqlalchemy.engine.Engine SELECT users.id, users.email, users.hashed_password, users.is_active, users.role, users.client_id, users.created_at, users.updated_at 
+FROM users 
+WHERE users.id = ?
+2025-09-30 16:08:00,087 INFO sqlalchemy.engine.Engine [generated in 0.00028s] (1,)
+2025-09-30 16:08:00,101 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:58808 - "POST /api/auth/register HTTP/1.1" 200 OK
+2025-09-30 16:08:00,138 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2025-09-30 16:08:00,138 INFO sqlalchemy.engine.Engine SELECT users.id AS users_id, users.email AS users_email, users.hashed_password AS users_hashed_password, users.is_active AS users_is_active, users.role AS users_role, users.client_id AS users_client_id, users.created_at AS users_created_at, users.updated_at AS users_updated_at 
+FROM users 
+WHERE users.email = ?
+ LIMIT ? OFFSET ?
+2025-09-30 16:08:00,139 INFO sqlalchemy.engine.Engine [cached since 0.8186s ago] ('admin@example.com', 1, 0)
+2025-09-30 16:08:00,618 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:58810 - "POST /api/auth/login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62683 - "GET /api/posts HTTP/1.1" 307 Temporary Redirect
+2025-09-30 16:20:42,975 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2025-09-30 16:20:42,981 INFO sqlalchemy.engine.Engine SELECT users.id AS users_id, users.email AS users_email, users.hashed_password AS users_hashed_password, users.is_active AS users_is_active, users.role AS users_role, users.client_id AS users_client_id, users.created_at AS users_created_at, users.updated_at AS users_updated_at 
+FROM users 
+WHERE users.email = ?
+ LIMIT ? OFFSET ?
+2025-09-30 16:20:42,982 INFO sqlalchemy.engine.Engine [cached since 763.7s ago] ('admin@example.com', 1, 0)
+2025-09-30 16:20:43,097 INFO sqlalchemy.engine.Engine SELECT anon_1.matched_posts_id AS anon_1_matched_posts_id, anon_1.matched_posts_client_id AS anon_1_matched_posts_client_id, anon_1.matched_posts_subreddit AS anon_1_matched_posts_subreddit, anon_1.matched_posts_reddit_post_id AS anon_1_matched_posts_reddit_post_id, anon_1.matched_posts_title AS anon_1_matched_posts_title, anon_1.matched_posts_url AS anon_1_matched_posts_url, anon_1.matched_posts_author AS anon_1_matched_posts_author, anon_1.matched_posts_content AS anon_1_matched_posts_content, anon_1.matched_posts_keywords_matched AS anon_1_matched_posts_keywords_matched, anon_1.matched_posts_score AS anon_1_matched_posts_score, anon_1.matched_posts_num_comments AS anon_1_matched_posts_num_comments, anon_1.matched_posts_flagged AS anon_1_matched_posts_flagged, anon_1.matched_posts_reviewed AS anon_1_matched_posts_reviewed, anon_1.matched_posts_created_at AS anon_1_matched_posts_created_at, anon_1.matched_posts_updated_at AS anon_1_matched_posts_updated_at, ai_responses_1.id AS ai_responses_1_id, ai_responses_1.post_id AS ai_responses_1_post_id, ai_responses_1.client_id AS ai_responses_1_client_id, ai_responses_1.content AS ai_responses_1_content, ai_responses_1.score AS ai_responses_1_score, ai_responses_1.copied AS ai_responses_1_copied, ai_responses_1.compliance_ack AS ai_responses_1_compliance_ack, ai_responses_1.created_at AS ai_responses_1_created_at 
+FROM (SELECT matched_posts.id AS matched_posts_id, matched_posts.client_id AS matched_posts_client_id, matched_posts.subreddit AS matched_posts_subreddit, matched_posts.reddit_post_id AS matched_posts_reddit_post_id, matched_posts.title AS matched_posts_title, matched_posts.url AS matched_posts_url, matched_posts.author AS matched_posts_author, matched_posts.content AS matched_posts_content, matched_posts.keywords_matched AS matched_posts_keywords_matched, matched_posts.score AS matched_posts_score, matched_posts.num_comments AS matched_posts_num_comments, matched_posts.flagged AS matched_posts_flagged, matched_posts.reviewed AS matched_posts_reviewed, matched_posts.created_at AS matched_posts_created_at, matched_posts.updated_at AS matched_posts_updated_at 
+FROM matched_posts ORDER BY matched_posts.id DESC
+ LIMIT ? OFFSET ?) AS anon_1 LEFT OUTER JOIN ai_responses AS ai_responses_1 ON anon_1.matched_posts_id = ai_responses_1.post_id ORDER BY anon_1.matched_posts_id DESC
+2025-09-30 16:20:43,097 INFO sqlalchemy.engine.Engine [generated in 0.00025s] (100, 0)
+2025-09-30 16:20:43,104 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:62723 - "GET /api/posts/ HTTP/1.1" 200 OK
+WARNING:  StatReload detected changes in 'app/api/routers/ops.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [3209]
+INFO:     Started server process [146]
+INFO:     Waiting for application startup.
+2025-09-30 18:20:24,311 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2025-09-30 18:20:24,311 INFO sqlalchemy.engine.Engine PRAGMA main.table_info("clients")
+2025-09-30 18:20:24,311 INFO sqlalchemy.engine.Engine [raw sql] ()
+2025-09-30 18:20:24,312 INFO sqlalchemy.engine.Engine PRAGMA main.table_info("client_configs")
+2025-09-30 18:20:24,312 INFO sqlalchemy.engine.Engine [raw sql] ()
+2025-09-30 18:20:24,312 INFO sqlalchemy.engine.Engine PRAGMA main.table_info("users")
+2025-09-30 18:20:24,312 INFO sqlalchemy.engine.Engine [raw sql] ()
+2025-09-30 18:20:24,312 INFO sqlalchemy.engine.Engine PRAGMA main.table_info("matched_posts")
+2025-09-30 18:20:24,312 INFO sqlalchemy.engine.Engine [raw sql] ()
+2025-09-30 18:20:24,313 INFO sqlalchemy.engine.Engine PRAGMA main.table_info("ai_responses")
+2025-09-30 18:20:24,313 INFO sqlalchemy.engine.Engine [raw sql] ()
+2025-09-30 18:20:24,313 INFO sqlalchemy.engine.Engine PRAGMA main.table_info("analytics_events")
+2025-09-30 18:20:24,313 INFO sqlalchemy.engine.Engine [raw sql] ()
+2025-09-30 18:20:24,313 INFO sqlalchemy.engine.Engine COMMIT
+INFO:     Application startup complete.
+WARNING:  StatReload detected changes in 'app/api/routers/ops.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [146]
+INFO:     Started server process [15509]
+INFO:     Waiting for application startup.
+2025-09-30 18:31:11,368 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2025-09-30 18:31:11,382 INFO sqlalchemy.engine.Engine PRAGMA main.table_info("clients")
+2025-09-30 18:31:11,382 INFO sqlalchemy.engine.Engine [raw sql] ()
+2025-09-30 18:31:11,449 INFO sqlalchemy.engine.Engine PRAGMA main.table_info("client_configs")
+2025-09-30 18:31:11,449 INFO sqlalchemy.engine.Engine [raw sql] ()
+2025-09-30 18:31:11,450 INFO sqlalchemy.engine.Engine PRAGMA main.table_info("users")
+2025-09-30 18:31:11,450 INFO sqlalchemy.engine.Engine [raw sql] ()
+2025-09-30 18:31:11,450 INFO sqlalchemy.engine.Engine PRAGMA main.table_info("matched_posts")
+2025-09-30 18:31:11,450 INFO sqlalchemy.engine.Engine [raw sql] ()
+2025-09-30 18:31:11,450 INFO sqlalchemy.engine.Engine PRAGMA main.table_info("ai_responses")
+2025-09-30 18:31:11,450 INFO sqlalchemy.engine.Engine [raw sql] ()
+2025-09-30 18:31:11,451 INFO sqlalchemy.engine.Engine PRAGMA main.table_info("analytics_events")
+2025-09-30 18:31:11,451 INFO sqlalchemy.engine.Engine [raw sql] ()
+2025-09-30 18:31:11,451 INFO sqlalchemy.engine.Engine COMMIT
+INFO:     Application startup complete.
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [15509]
+INFO:     Stopping reloader process [3189]

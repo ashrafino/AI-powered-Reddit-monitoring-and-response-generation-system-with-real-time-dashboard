@@ -1,0 +1,58 @@
+2025-10-01 19:31:35,509 - INFO - Starting health check...
+2025-10-01 19:31:35,587 - ERROR - API health check failed: HTTPConnectionPool(host='localhost', port=8001): Max retries exceeded with url: /api/health (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x10925a660>: Failed to establish a new connection: [Errno 61] Connection refused'))
+2025-10-01 19:31:35,591 - WARNING - Health check completed: 1 critical, 0 warning issues found
+2025-10-01 19:31:35,591 - ERROR - API: API is not responding: HTTPConnectionPool(host='localhost', port=8001): Max retries exceeded with url: /api/health (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x10925a660>: Failed to establish a new connection: [Errno 61] Connection refused'))
+Wed Oct  1 19:32:12 +01 2025: Running health check...
+usage: health_monitor.py [-h] [--api-base API_BASE] [--no-alerts] [--json]
+                         [--watch WATCH] [--save SAVE] [--quiet]
+health_monitor.py: error: unrecognized arguments: BOT/health_report_20251001_193212.json
+Wed Oct  1 19:32:12 +01 2025: Health check found critical issues
+Wed Oct  1 19:32:25 +01 2025: Running health check...
+usage: health_monitor.py [-h] [--api-base API_BASE] [--no-alerts] [--json]
+                         [--watch WATCH] [--save SAVE] [--quiet]
+health_monitor.py: error: unrecognized arguments: BOT/health_report_20251001_193225.json
+Wed Oct  1 19:32:26 +01 2025: Health check found critical issues
+Wed Oct  1 19:33:39 +01 2025: Running health check...
+2025-10-01 19:33:40,123 - INFO - Starting health check...
+2025-10-01 19:33:40,123 - INFO - Starting health check...
+2025-10-01 19:33:40,143 - ERROR - API health check failed: HTTPConnectionPool(host='localhost', port=8001): Max retries exceeded with url: /api/health (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x106a0e660>: Failed to establish a new connection: [Errno 61] Connection refused'))
+2025-10-01 19:33:40,143 - ERROR - API health check failed: HTTPConnectionPool(host='localhost', port=8001): Max retries exceeded with url: /api/health (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x106a0e660>: Failed to establish a new connection: [Errno 61] Connection refused'))
+/Users/macbook/Documents/REDDIT BOT/app/scripts/health_monitor.py:120: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+  "timestamp": datetime.utcnow().isoformat()
+/Users/macbook/Documents/REDDIT BOT/app/scripts/health_monitor.py:378: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+  "timestamp": datetime.utcnow().isoformat(),
+2025-10-01 19:33:40,144 - WARNING - Health check completed: 1 critical, 0 warning issues found
+2025-10-01 19:33:40,144 - WARNING - Health check completed: 1 critical, 0 warning issues found
+2025-10-01 19:33:40,144 - ERROR - API: API is not responding: HTTPConnectionPool(host='localhost', port=8001): Max retries exceeded with url: /api/health (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x106a0e660>: Failed to establish a new connection: [Errno 61] Connection refused'))
+2025-10-01 19:33:40,144 - ERROR - API: API is not responding: HTTPConnectionPool(host='localhost', port=8001): Max retries exceeded with url: /api/health (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x106a0e660>: Failed to establish a new connection: [Errno 61] Connection refused'))
+{
+  "timestamp": "2025-10-01T18:33:40.144891",
+  "overall_status": "critical",
+  "issues_found": 1,
+  "critical_issues": 1,
+  "warning_issues": 0,
+  "issues": [
+    {
+      "severity": "critical",
+      "component": "api",
+      "message": "API is not responding: HTTPConnectionPool(host='localhost', port=8001): Max retries exceeded with url: /api/health (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x106a0e660>: Failed to establish a new connection: [Errno 61] Connection refused'))",
+      "timestamp": "2025-10-01T18:33:40.143395"
+    }
+  ],
+  "health_data": {
+    "status": "error",
+    "error": "HTTPConnectionPool(host='localhost', port=8001): Max retries exceeded with url: /api/health (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x106a0e660>: Failed to establish a new connection: [Errno 61] Connection refused'))",
+    "endpoints": {
+      "health": false,
+      "detailed": false,
+      "metrics": false,
+      "dependencies": false,
+      "celery": false
+    }
+  }
+}
+
+📄 Report saved to: /Users/macbook/Documents/REDDIT BOT/health_report_20251001_193339.json
+Wed Oct  1 19:33:40 +01 2025: Health check found critical issues
+2025-10-01 19:40:34,092 - ERROR - API health check failed: HTTPConnectionPool(host='localhost', port=8001): Max retries exceeded with url: /api/health (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x1073c6660>: Failed to establish a new connection: [Errno 61] Connection refused'))
+2025-10-01 19:40:34,093 - ERROR - API: API is not responding: HTTPConnectionPool(host='localhost', port=8001): Max retries exceeded with url: /api/health (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x1073c6660>: Failed to establish a new connection: [Errno 61] Connection refused'))

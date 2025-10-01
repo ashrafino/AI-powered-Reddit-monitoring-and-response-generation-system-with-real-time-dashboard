@@ -1,0 +1,26 @@
+{
+  "timestamp": "2025-10-01T18:33:40.144891",
+  "overall_status": "critical",
+  "issues_found": 1,
+  "critical_issues": 1,
+  "warning_issues": 0,
+  "issues": [
+    {
+      "severity": "critical",
+      "component": "api",
+      "message": "API is not responding: HTTPConnectionPool(host='localhost', port=8001): Max retries exceeded with url: /api/health (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x106a0e660>: Failed to establish a new connection: [Errno 61] Connection refused'))",
+      "timestamp": "2025-10-01T18:33:40.143395"
+    }
+  ],
+  "health_data": {
+    "status": "error",
+    "error": "HTTPConnectionPool(host='localhost', port=8001): Max retries exceeded with url: /api/health (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x106a0e660>: Failed to establish a new connection: [Errno 61] Connection refused'))",
+    "endpoints": {
+      "health": false,
+      "detailed": false,
+      "metrics": false,
+      "dependencies": false,
+      "celery": false
+    }
+  }
+}
