@@ -1,5 +1,5 @@
 # Multi-stage build for faster builds and smaller images
-FROM python:3.11-slim as builder
+FROM python:3.11-slim AS builder
 
 ENV PIP_NO_CACHE_DIR=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
