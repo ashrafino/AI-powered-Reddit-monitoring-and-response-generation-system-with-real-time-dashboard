@@ -159,8 +159,8 @@ services:
 
   frontend:
     build:
-      context: ./frontend
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: frontend/Dockerfile
     environment:
       - NEXT_PUBLIC_API_BASE=http://nginx
       - NODE_ENV=production
