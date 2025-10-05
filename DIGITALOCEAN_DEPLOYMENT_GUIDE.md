@@ -1,6 +1,7 @@
 # 🚀 Complete DigitalOcean Deployment Guide
 
 ## Table of Contents
+
 1. [Prerequisites](#prerequisites)
 2. [DigitalOcean Setup](#digitalocean-setup)
 3. [Server Configuration](#server-configuration)
@@ -14,17 +15,20 @@
 ## Prerequisites
 
 ### Required Accounts
+
 - ✅ DigitalOcean account
 - ✅ Domain name (optional but recommended)
 - ✅ GitHub account (for code repository)
 
 ### Required API Keys
+
 - ✅ Reddit API credentials
 - ✅ OpenAI API key
 - ✅ SerpAPI key (for Google search)
 - ✅ YouTube API key
 
 ### Local Requirements
+
 - ✅ SSH key pair
 - ✅ Git installed
 - ✅ Basic terminal knowledge
@@ -36,29 +40,34 @@
 ### Step 1: Create a Droplet
 
 1. **Log in to DigitalOcean**
+
    - Go to https://cloud.digitalocean.com
 
 2. **Create New Droplet**
+
    - Click "Create" → "Droplets"
 
 3. **Choose Configuration**
+
    ```
    Region: Choose closest to your users (e.g., New York, San Francisco)
    Image: Ubuntu 22.04 LTS x64
    Droplet Type: Basic
    CPU Options: Regular
-   Size: 
+   Size:
      - Minimum: $12/month (2 GB RAM, 1 vCPU, 50 GB SSD)
      - Recommended: $18/month (2 GB RAM, 2 vCPU, 60 GB SSD)
      - Production: $24/month (4 GB RAM, 2 vCPU, 80 GB SSD)
    ```
 
 4. **Add SSH Key**
+
    - Click "New SSH Key"
    - Paste your public key (`cat ~/.ssh/id_rsa.pub`)
    - Name it (e.g., "My Laptop")
 
 5. **Finalize**
+
    - Hostname: `reddit-bot-prod`
    - Tags: `production`, `reddit-bot`
    - Click "Create Droplet"
@@ -70,18 +79,20 @@
 
 1. **Go to Networking → Firewalls**
 2. **Create Firewall**
+
    ```
    Name: reddit-bot-firewall
-   
+
    Inbound Rules:
    - SSH: TCP, Port 22, All IPv4, All IPv6
    - HTTP: TCP, Port 80, All IPv4, All IPv6
    - HTTPS: TCP, Port 443, All IPv4, All IPv6
-   
+
    Outbound Rules:
    - All TCP, All Ports, All IPv4, All IPv6
    - All UDP, All Ports, All IPv4, All IPv6
    ```
+
 3. **Apply to Droplet**
    - Select your droplet
    - Click "Create Firewall"
@@ -94,7 +105,7 @@
 
 ```bash
 # SSH into your server
-ssh root@YOUR_DROPLET_IP
+ssh root@146.190.50.85
 
 # Update system
 apt update && apt upgrade -y
@@ -150,7 +161,7 @@ mkdir -p ~/apps
 cd ~/apps
 
 # Clone your repository
-git clone https://github.com/YOUR_USERNAME/YOUR_REPO.git reddit-bot
+git clone https://github.com/ashrafino/AI-powered-Reddit-monitoring-and-response-generation-system-with-real-time-dashboard reddit-bot
 cd reddit-bot
 
 # Or if using SSH
@@ -223,6 +234,7 @@ SENTRY_DSN=your-sentry-dsn
 ```
 
 **Generate secure passwords:**
+
 ```bash
 # Generate SECRET_KEY
 openssl rand -hex 32
@@ -255,9 +267,9 @@ upstream frontend {
 server {
     listen 80;
     server_name YOUR_DOMAIN_OR_IP;  # Change this!
-    
+
     client_max_body_size 10M;
-    
+
     # Frontend
     location / {
         proxy_pass http://frontend;
@@ -270,7 +282,7 @@ server {
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
     }
-    
+
     # Backend API
     location /api {
         proxy_pass http://backend;
@@ -282,7 +294,7 @@ server {
         proxy_read_timeout 300s;
         proxy_connect_timeout 75s;
     }
-    
+
     # Health check
     location /health {
         access_log off;
@@ -335,13 +347,14 @@ docker-compose -f docker-compose.prod.yml exec redis redis-cli -a YOUR_REDIS_PAS
 ### Step 1: Point Domain to Droplet
 
 1. **In Your Domain Registrar (e.g., Namecheap, GoDaddy)**
+
    ```
    Add A Record:
    Type: A
    Host: @
    Value: YOUR_DROPLET_IP
    TTL: 300
-   
+
    Add A Record (for www):
    Type: A
    Host: www
@@ -408,16 +421,16 @@ server {
 server {
     listen 443 ssl http2;
     server_name yourdomain.com www.yourdomain.com;
-    
+
     ssl_certificate /etc/nginx/ssl/fullchain.pem;
     ssl_certificate_key /etc/nginx/ssl/privkey.pem;
-    
+
     ssl_protocols TLSv1.2 TLSv1.3;
     ssl_ciphers HIGH:!aNULL:!MD5;
     ssl_prefer_server_ciphers on;
-    
+
     client_max_body_size 10M;
-    
+
     # Frontend
     location / {
         proxy_pass http://frontend;
@@ -430,7 +443,7 @@ server {
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
     }
-    
+
     # Backend API
     location /api {
         proxy_pass http://backend;
