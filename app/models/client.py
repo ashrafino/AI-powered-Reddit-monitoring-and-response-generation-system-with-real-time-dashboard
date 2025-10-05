@@ -15,6 +15,7 @@ class Client(Base):
 
     users = relationship("User", back_populates="client")
     configs = relationship("ClientConfig", back_populates="client")
+    analytics_events = relationship("AnalyticsEvent", back_populates="client")
 
 
 

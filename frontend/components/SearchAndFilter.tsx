@@ -48,7 +48,7 @@ const SearchAndFilter: React.FC<SearchAndFilterProps> = ({
   // Notify parent of filter changes
   useEffect(() => {
     onFilterChange(filters)
-  }, [filters, onFilterChange])
+  }, [filters])
 
   const updateFilter = (key: keyof FilterOptions, value: any) => {
     setFilters(prev => ({ ...prev, [key]: value }))

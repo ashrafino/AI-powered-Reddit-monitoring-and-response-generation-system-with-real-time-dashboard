@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from app.api.deps import get_current_user, require_admin
 from app.core.security import get_password_hash
@@ -16,7 +16,10 @@ def read_me(user: User = Depends(get_current_user)):
 
 @router.get("/", response_model=list[UserOut])
 def list_users(db: Session = Depends(get_db), _: None = Depends(require_admin)):
-    return db.query(User).order_by(User.id.desc()).all()
+    # Use eager loading to prevent N+1 queries when accessing client relationship
+    return db.query(User).options(
+        joinedload(User.client)
+    ).order_by(User.id.desc()).all()
 
 @router.post("/", response_model=UserOut)
 def create_user(payload: UserCreate, db: Session = Depends(get_db), _: None = Depends(require_admin)):

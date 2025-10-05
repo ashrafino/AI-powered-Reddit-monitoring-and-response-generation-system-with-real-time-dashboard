@@ -1,63 +1,48 @@
-import { useState } from 'react'
-import Router from 'next/router'
-import { useEffect } from 'react'
+import { useState, useEffect } from 'react'
+import { useRouter } from 'next/router'
+import { useAuth } from '../utils/authContext'
+import { APIClientError } from '../utils/apiBase'
 
-import { API_BASE } from '../utils/apiBase'
-const API = API_BASE
-
-export default function Login({ setToken }: any) {
+export default function Login() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
+  const { login, isAuthenticated, isLoading, error } = useAuth()
+  const router = useRouter()
 
+  // Redirect if already authenticated
   useEffect(() => {
-    // Check if we're in browser before accessing localStorage
-    if (typeof window !== 'undefined') {
-      const t = localStorage.getItem('token')
-      if (t) Router.replace('/dashboard')
+    if (isAuthenticated) {
+      router.replace('/dashboard')
     }
-  }, [])
+  }, [isAuthenticated, router])
 
-  const submit = async (e: any) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setLoading(true)
-    setError('')
     
     try {
-      const res = await fetch(`${API}/api/auth/login`, {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/x-www-form-urlencoded',
-          'Accept': 'application/json'
-        },
-        body: new URLSearchParams({ username: email, password }),
-      })
-      
-      let data
-      try {
-        data = await res.json()
-      } catch (parseError) {
-        throw new Error('Failed to parse server response')
-      }
-      
-      if (!res.ok) {
-        throw new Error(data.detail || 'Login failed')
-      }
-      
-      if (!data.access_token) {
-        throw new Error('No access token received')
-      }
-      
-      localStorage.setItem('token', data.access_token)
-      setToken(data.access_token)
-      Router.push('/dashboard')
-    } catch (err: any) {
+      await login(email, password)
+      // Navigation is handled by the login function
+    } catch (err) {
+      // Error is handled by the auth context
       console.error('Login error:', err)
-      setError(err.message || 'Login failed. Please check your credentials.')
-    } finally {
-      setLoading(false)
     }
+  }
+
+  // Show loading state during initial auth check
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
+          <p className="mt-2 text-gray-600">Loading...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Don't render login form if already authenticated
+  if (isAuthenticated) {
+    return null
   }
 
   return (
@@ -67,14 +52,45 @@ export default function Login({ setToken }: any) {
         <form onSubmit={submit} className="space-y-3">
           <div>
             <label className="block text-sm text-gray-600">Email</label>
-            <input className="mt-1 w-full border rounded-md px-3 py-2" value={email} onChange={e => setEmail(e.target.value)} required />
+            <input 
+              className="mt-1 w-full border rounded-md px-3 py-2" 
+              type="email"
+              value={email} 
+              onChange={e => setEmail(e.target.value)} 
+              required 
+              disabled={isLoading}
+            />
           </div>
           <div>
             <label className="block text-sm text-gray-600">Password</label>
-            <input className="mt-1 w-full border rounded-md px-3 py-2" type="password" value={password} onChange={e => setPassword(e.target.value)} required />
+            <input 
+              className="mt-1 w-full border rounded-md px-3 py-2" 
+              type="password" 
+              value={password} 
+              onChange={e => setPassword(e.target.value)} 
+              required 
+              disabled={isLoading}
+            />
           </div>
-          {error && <p className="text-sm text-red-600">{error}</p>}
-          <button className="w-full bg-black text-white py-2 rounded-md" disabled={loading} type="submit">{loading ? 'Loading…' : 'Login'}</button>
+          {error && (
+            <div className="bg-red-50 border border-red-200 rounded-md p-3">
+              <p className="text-sm text-red-600">{error}</p>
+            </div>
+          )}
+          <button 
+            className="w-full bg-black text-white py-2 rounded-md disabled:opacity-50 disabled:cursor-not-allowed" 
+            disabled={isLoading} 
+            type="submit"
+          >
+            {isLoading ? (
+              <span className="flex items-center justify-center">
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                Signing in...
+              </span>
+            ) : (
+              'Sign in'
+            )}
+          </button>
         </form>
       </div>
     </div>

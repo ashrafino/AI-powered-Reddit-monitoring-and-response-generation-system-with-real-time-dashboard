@@ -5,6 +5,7 @@ A comprehensive AI-powered Reddit monitoring and response generation system with
 ## ✨ Features
 
 ### 🎯 Core Functionality
+
 - **AI-Powered Response Generation** - OpenAI integration for intelligent Reddit responses
 - **Real-Time Monitoring** - Live Reddit post tracking with WebSocket updates
 - **Multi-Client Support** - Secure multi-tenant architecture
@@ -12,6 +13,7 @@ A comprehensive AI-powered Reddit monitoring and response generation system with
 - **Advanced Analytics** - Comprehensive performance tracking and insights
 
 ### 🖥️ Dashboard Features
+
 - **Real-Time Updates** - Live WebSocket-powered dashboard
 - **Response Management** - Inline editing, preview, and version history
 - **Advanced Search & Filtering** - Multi-criteria post and response filtering
@@ -19,6 +21,7 @@ A comprehensive AI-powered Reddit monitoring and response generation system with
 - **Performance Monitoring** - Built-in performance metrics and optimization
 
 ### 🔒 Security & Compliance
+
 - **JWT Authentication** - Secure token-based authentication
 - **Rate Limiting** - API protection and abuse prevention
 - **HTTPS/SSL** - Production-ready security
@@ -26,6 +29,7 @@ A comprehensive AI-powered Reddit monitoring and response generation system with
 - **Manual-Only Posting** - No automated Reddit posting for compliance
 
 ### 📊 Analytics & Insights
+
 - **Interactive Charts** - Real-time analytics visualization
 - **Keyword Performance** - Track keyword effectiveness
 - **Subreddit Analytics** - Performance by community
@@ -35,6 +39,7 @@ A comprehensive AI-powered Reddit monitoring and response generation system with
 ## 🚀 Quick Start
 
 ### Development (Fastest)
+
 ```bash
 # Clone repository
 git clone https://github.com/your-username/reddit-bot-system.git
@@ -50,6 +55,7 @@ cd reddit-bot-system
 ```
 
 ### Production Docker
+
 ```bash
 # Copy environment file
 cp .env.example .env
@@ -65,6 +71,7 @@ docker-compose up --build -d
 ## 🏗️ Architecture
 
 ### Backend Services
+
 - **FastAPI Backend** - High-performance Python API
 - **Celery Workers** - Distributed task processing
 - **Celery Beat** - Scheduled task management
@@ -73,6 +80,7 @@ docker-compose up --build -d
 - **WebSocket Server** - Real-time communication
 
 ### Frontend
+
 - **Next.js** - React-based frontend application
 - **TypeScript** - Type-safe development
 - **Tailwind CSS** - Modern responsive design
@@ -80,6 +88,7 @@ docker-compose up --build -d
 - **WebSocket Client** - Real-time updates
 
 ### Infrastructure
+
 - **Nginx** - Reverse proxy and load balancer
 - **Docker** - Containerized deployment
 - **SSL/TLS** - Automatic HTTPS with Let's Encrypt
@@ -87,15 +96,15 @@ docker-compose up --build -d
 
 ## 📦 Services Overview
 
-| Service | Description | Port |
-|---------|-------------|------|
-| `backend` | FastAPI application server | 8001 |
-| `worker` | Celery background worker | - |
-| `beat` | Celery task scheduler | - |
-| `frontend` | Next.js web application | 3000 |
-| `postgres` | PostgreSQL database | 5432 |
-| `redis` | Redis cache/message broker | 6379 |
-| `nginx` | Reverse proxy | 80/443 |
+| Service    | Description                | Port   |
+| ---------- | -------------------------- | ------ |
+| `backend`  | FastAPI application server | 8001   |
+| `worker`   | Celery background worker   | -      |
+| `beat`     | Celery task scheduler      | -      |
+| `frontend` | Next.js web application    | 3000   |
+| `postgres` | PostgreSQL database        | 5432   |
+| `redis`    | Redis cache/message broker | 6379   |
+| `nginx`    | Reverse proxy              | 80/443 |
 
 ## 🔧 Configuration
 
@@ -108,6 +117,7 @@ cp .env.example .env
 ```
 
 **Required Configuration:**
+
 ```bash
 # Application Security
 SECRET_KEY=your-super-secure-secret-key-here
@@ -133,7 +143,9 @@ ADMIN_PASSWORD=secure_password
 ```
 
 ### Advanced Configuration
+
 See `.env.example` for all available options including:
+
 - Email/SMTP settings
 - Rate limiting configuration
 - Monitoring and logging
@@ -143,6 +155,7 @@ See `.env.example` for all available options including:
 ## 🌐 Production Deployment
 
 ### DigitalOcean (Recommended)
+
 Complete production deployment with SSL, monitoring, and backups:
 
 ```bash
@@ -154,6 +167,7 @@ cat DEPLOYMENT_GUIDE.md
 ```
 
 **Features:**
+
 - Automated server setup
 - SSL certificate management
 - Security hardening
@@ -162,6 +176,7 @@ cat DEPLOYMENT_GUIDE.md
 - Performance optimization
 
 ### Manual Deployment
+
 ```bash
 # Production environment
 cp .env.prod.example .env.prod
@@ -174,6 +189,7 @@ docker-compose -f docker-compose.prod.yml up -d --build
 ## 🛠️ Development
 
 ### Local Development
+
 ```bash
 # Fast development mode (recommended)
 ./scripts/fast-build.sh
@@ -186,6 +202,7 @@ docker-compose logs -f backend
 ```
 
 ### Code Structure
+
 ```
 ├── app/                    # Backend Python application
 │   ├── api/               # API routes and endpoints
@@ -204,6 +221,7 @@ docker-compose logs -f backend
 ```
 
 ### API Documentation
+
 - **Interactive Docs**: http://localhost:8001/docs
 - **OpenAPI Schema**: http://localhost:8001/openapi.json
 - **ReDoc**: http://localhost:8001/redoc
@@ -211,12 +229,14 @@ docker-compose logs -f backend
 ## 📊 Monitoring & Analytics
 
 ### Built-in Monitoring
+
 - **Health Checks** - Service availability monitoring
 - **Performance Metrics** - Response times and resource usage
 - **Error Tracking** - Comprehensive error logging
 - **Usage Analytics** - User activity and API usage
 
 ### Dashboard Analytics
+
 - **Real-time Charts** - Live performance visualization
 - **Keyword Tracking** - Monitor keyword effectiveness
 - **Subreddit Performance** - Community-specific analytics
@@ -227,6 +247,7 @@ docker-compose logs -f backend
 ### Common Issues
 
 **Services won't start:**
+
 ```bash
 # Check logs
 docker-compose logs
@@ -240,6 +261,7 @@ docker-compose up --build
 ```
 
 **Database connection issues:**
+
 ```bash
 # Check database status
 docker-compose exec postgres pg_isready
@@ -250,6 +272,7 @@ docker-compose up -d postgres
 ```
 
 **Performance issues:**
+
 ```bash
 # Enable performance monitoring
 # In dashboard: Click "Perf ON" button
@@ -262,7 +285,9 @@ docker system prune -f
 ```
 
 ### Build Optimization
+
 If builds are slow, use the optimized development mode:
+
 ```bash
 # Fast development (no Docker builds)
 ./scripts/fast-build.sh
@@ -280,6 +305,7 @@ cat BUILD_OPTIMIZATION.md
 5. Submit a pull request
 
 ### Development Guidelines
+
 - Follow Python PEP 8 style guide
 - Use TypeScript for frontend development
 - Add tests for new features
@@ -355,6 +381,7 @@ SENTRY_DSN=
 ```
 
 Security notes:
+
 - Keep `.env` out of version control. Add `.env` to `.gitignore`.
 - Never share real keys in issues/PRs. Use placeholders in examples.
 - Rotate keys if you suspect exposure.

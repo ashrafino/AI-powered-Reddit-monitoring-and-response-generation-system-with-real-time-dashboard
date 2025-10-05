@@ -50,6 +50,13 @@ class AIResponse(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     post = relationship("MatchedPost", back_populates="responses")
+    
+    # Composite indexes for frequently queried columns
+    __table_args__ = (
+        Index('idx_responses_post_client', 'post_id', 'client_id'),
+        Index('idx_responses_client_created', 'client_id', 'created_at'),
+        Index('idx_responses_quality_score', 'score'),
+    )
 
 
 

@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from sqlalchemy import text, func
-from app.db.session import get_db
+from app.db.session import get_db, get_connection_pool_stats, check_database_health
 from app.core.config import settings
 from app.models.client import Client
 from app.models.post import MatchedPost, AIResponse
@@ -32,18 +32,22 @@ def health_check():
 
 @router.get("/ready")
 def readiness_check(db: Session = Depends(get_db)):
-    """Readiness check including database connectivity."""
+    """Readiness check including database connectivity and connection pool health."""
     try:
         # Test database connection
         db.execute(text("SELECT 1"))
+        
+        # Get connection pool health
+        db_health = check_database_health()
         
         # Test Redis connection
         redis_client = redis.from_url(settings.redis_url)
         redis_client.ping()
         
         return {
-            "status": "ready",
-            "database": "connected",
+            "status": "ready" if db_health["status"] == "healthy" else "degraded",
+            "database": db_health["status"],
+            "database_pool": db_health.get("pool_stats", {}),
             "redis": "connected",
             "timestamp": time.time()
         }
@@ -73,9 +77,13 @@ def detailed_health_check(db: Session = Depends(get_db)):
         "hostname": socket.gethostname()
     }
     
-    # Database health
+    # Database health with connection pool monitoring
     try:
         db.execute(text("SELECT 1"))
+        
+        # Get connection pool health
+        db_health = check_database_health()
+        pool_stats = db_health.get("pool_stats", {})
         
         # Get basic counts
         clients_count = db.query(Client).count()
@@ -93,9 +101,23 @@ def detailed_health_check(db: Session = Depends(get_db)):
             AIResponse.created_at >= yesterday
         ).count()
         
+        # Calculate pool utilization percentage
+        pool_utilization = 0
+        if pool_stats.get("pool_size", 0) > 0:
+            pool_utilization = (pool_stats.get("checked_out", 0) / 
+                              (pool_stats.get("pool_size", 1) + pool_stats.get("max_overflow", 0))) * 100
+        
         health_data["database"] = {
-            "status": "healthy",
+            "status": db_health["status"],
             "connectivity": True,
+            "connection_pool": {
+                "pool_size": pool_stats.get("pool_size", 0),
+                "checked_out": pool_stats.get("checked_out", 0),
+                "checked_in": pool_stats.get("checked_in", 0),
+                "overflow": pool_stats.get("overflow", 0),
+                "total_connections": pool_stats.get("total_connections", 0),
+                "utilization_percent": round(pool_utilization, 2)
+            },
             "clients": clients_count,
             "total_posts": posts_count,
             "total_responses": responses_count,
@@ -378,6 +400,70 @@ def check_reddit_api():
             "error": str(e),
             "timestamp": datetime.utcnow().isoformat()
         }
+
+@router.get("/database/pool")
+def check_connection_pool():
+    """Check database connection pool statistics and health."""
+    try:
+        pool_stats = get_connection_pool_stats()
+        db_health = check_database_health()
+        
+        # Calculate utilization metrics
+        total_capacity = pool_stats["pool_size"] + pool_stats["max_overflow"]
+        utilization_percent = (pool_stats["checked_out"] / total_capacity * 100) if total_capacity > 0 else 0
+        available_connections = pool_stats["checked_in"]
+        
+        # Determine health status based on utilization
+        if utilization_percent > 90:
+            status = "critical"
+        elif utilization_percent > 75:
+            status = "warning"
+        else:
+            status = "healthy"
+        
+        return {
+            "status": status,
+            "pool_configuration": {
+                "pool_size": pool_stats["pool_size"],
+                "max_overflow": pool_stats["max_overflow"],
+                "total_capacity": total_capacity,
+                "timeout_seconds": pool_stats["timeout"]
+            },
+            "current_usage": {
+                "checked_out": pool_stats["checked_out"],
+                "checked_in": pool_stats["checked_in"],
+                "overflow": pool_stats["overflow"],
+                "available": available_connections,
+                "utilization_percent": round(utilization_percent, 2)
+            },
+            "health": db_health["status"],
+            "recommendations": get_pool_recommendations(utilization_percent, pool_stats),
+            "timestamp": datetime.utcnow().isoformat()
+        }
+    except Exception as e:
+        logger.error(f"Connection pool check failed: {e}")
+        return {
+            "status": "error",
+            "error": str(e),
+            "timestamp": datetime.utcnow().isoformat()
+        }
+
+def get_pool_recommendations(utilization: float, stats: dict) -> list:
+    """Generate recommendations based on pool utilization."""
+    recommendations = []
+    
+    if utilization > 90:
+        recommendations.append("CRITICAL: Connection pool near capacity. Consider increasing pool_size or max_overflow.")
+    elif utilization > 75:
+        recommendations.append("WARNING: High connection pool utilization. Monitor for potential bottlenecks.")
+    
+    if stats["overflow"] > 0:
+        recommendations.append(f"Using {stats['overflow']} overflow connections. This is normal under load.")
+    
+    if utilization < 25:
+        recommendations.append("Pool utilization is low. Current configuration is adequate.")
+    
+    return recommendations if recommendations else ["Connection pool is operating normally."]
 
 @router.get("/celery")
 def check_celery_health():

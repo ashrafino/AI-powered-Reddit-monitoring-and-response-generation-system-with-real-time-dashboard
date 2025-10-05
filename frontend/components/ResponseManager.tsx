@@ -371,7 +371,7 @@ const ResponseManager: React.FC<ResponseManagerProps> = ({
                         {key.replace('_', ' ')}
                       </div>
                       <div className="text-sm font-medium">
-                        {typeof value === 'number' ? `${Math.round(value)}%` : value}
+                        {typeof value === 'number' ? `${Math.round(value)}%` : String(value)}
                       </div>
                     </div>
                   ))}

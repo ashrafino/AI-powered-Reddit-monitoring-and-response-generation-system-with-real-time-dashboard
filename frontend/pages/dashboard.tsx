@@ -1,66 +1,44 @@
 import useSWR from 'swr'
-import { useEffect, useState } from 'react'
-import Router from 'next/router'
+import { useEffect, useState, useCallback } from 'react'
+import { useRouter } from 'next/router'
 import Layout from '../components/Layout'
-import AnalyticsCharts from '../components/AnalyticsCharts'
-import EnhancedAnalyticsCharts from '../components/EnhancedAnalyticsCharts'
 import AnalyticsDashboard from '../components/AnalyticsDashboard'
-import PerformanceMonitor from '../components/PerformanceMonitor'
-import RealTimeNotifications from '../components/RealTimeNotifications'
-import MonitoringStatus from '../components/MonitoringStatus'
 import ResponseManager from '../components/ResponseManager'
 import SearchAndFilter from '../components/SearchAndFilter'
 import MobileResponsiveLayout from '../components/MobileResponsiveLayout'
-import { WebSocketProvider, useWebSocket } from '../components/WebSocketProvider'
-import { API_BASE } from '../utils/apiBase'
+import { WebSocketProvider } from '../components/WebSocketProvider'
+import { useAuth } from '../utils/authContext'
+import { apiClient, APIClientError, API_BASE } from '../utils/apiBase'
+import { AuthErrorDisplay } from '../components/AuthErrorDisplay'
 
-const API = API_BASE
-
-const fetcher = async (url: string, token: string) => {
-  const response = await fetch(url, { 
-    headers: { 
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json'
-    } 
-  })
-  
-  if (!response.ok) {
-    if (response.status === 401) {
-      // Token expired or invalid, redirect to login
-      localStorage.removeItem('token')
-      Router.replace('/')
-      throw new Error('Unauthorized')
+const fetcher = async (url: string) => {
+  try {
+    return await apiClient.get(url)
+  } catch (error) {
+    if (error instanceof APIClientError && error.isAuthError) {
+      // Auth errors are handled by the auth context
+      throw error
     }
-    throw new Error(`HTTP error! status: ${response.status}`)
+    throw error
   }
-  
-  return response.json()
 }
 
 function DashboardContent() {
-  const [token, setToken] = useState<string | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
+  const { isAuthenticated, isLoading: authLoading, token, logout, error: authError } = useAuth()
   const [filteredPosts, setFilteredPosts] = useState<any[]>([])
   const [availableSubreddits, setAvailableSubreddits] = useState<string[]>([])
-  const [viewMode, setViewMode] = useState<'enhanced' | 'classic' | 'dashboard'>('dashboard')
-  const [performanceMonitorEnabled, setPerformanceMonitorEnabled] = useState(false)
-  const { lastMessage } = useWebSocket()
+  const router = useRouter()
   
+  // Redirect to login if not authenticated
   useEffect(() => {
-    // Check if we're in browser before accessing localStorage
-    if (typeof window !== 'undefined') {
-      const t = localStorage.getItem('token')
-      setToken(t)
-      if (!t) {
-        Router.replace('/')
-      }
+    if (!authLoading && !isAuthenticated) {
+      router.replace('/')
     }
-    setIsLoading(false)
-  }, [])
-
+  }, [isAuthenticated, authLoading, router])
+  
   const { data: posts, error: postsError, mutate: mutatePosts } = useSWR(
-    token ? [`${API}/api/posts`, token] : null, 
-    ([url, t]) => fetcher(url, t),
+    isAuthenticated ? '/api/posts' : null, 
+    fetcher,
     { 
       revalidateOnFocus: false,
       revalidateOnReconnect: true,
@@ -69,8 +47,8 @@ function DashboardContent() {
   )
 
   const { data: summary, error: summaryError, mutate: mutateSummary } = useSWR(
-    token ? [`${API}/api/analytics/summary`, token] : null, 
-    ([url, t]) => fetcher(url, t),
+    isAuthenticated ? '/api/analytics/summary' : null, 
+    fetcher,
     { 
       revalidateOnFocus: false,
       revalidateOnReconnect: true,
@@ -78,29 +56,17 @@ function DashboardContent() {
     }
   )
 
-  // Handle real-time updates
-  useEffect(() => {
-    if (lastMessage) {
-      if (lastMessage.type === 'new_post' || lastMessage.type === 'new_response') {
-        mutatePosts() // Refresh posts data
-        mutateSummary() // Refresh summary data
-      } else if (lastMessage.type === 'analytics_update') {
-        mutateSummary() // Refresh analytics
-      }
-    }
-  }, [lastMessage, mutatePosts, mutateSummary])
-
   // Extract available subreddits from posts
   useEffect(() => {
     if (posts && Array.isArray(posts)) {
-      const subreddits = [...new Set(posts.map((p: any) => p.subreddit).filter(Boolean))]
+      const subreddits = Array.from(new Set(posts.map((p: any) => p.subreddit).filter(Boolean)))
       setAvailableSubreddits(subreddits)
       setFilteredPosts(posts)
     }
   }, [posts])
 
   // Filter posts based on search and filter criteria
-  const handleFilterChange = (filters: any) => {
+  const handleFilterChange = useCallback((filters: any) => {
     if (!posts || !Array.isArray(posts)) return
 
     let filtered = [...posts]
@@ -210,7 +176,7 @@ function DashboardContent() {
     })
 
     setFilteredPosts(filtered)
-  }
+  }, [posts])
 
   const handleResponseUpdate = (responseId: number, updatedResponse: any) => {
     // Update the posts data with the new response
@@ -218,7 +184,7 @@ function DashboardContent() {
   }
 
   const { data: trends, error: trendsError } = useSWR(
-    token ? [`${API}/api/analytics/trends`, token] : null, 
+    token ? [`${API_BASE}/api/analytics/trends`, token] : null, 
     ([url, t]) => fetcher(url, t),
     { 
       revalidateOnFocus: false,
@@ -228,7 +194,7 @@ function DashboardContent() {
   )
 
   const { data: keywordInsights, error: keywordError } = useSWR(
-    token ? [`${API}/api/analytics/keywords`, token] : null, 
+    token ? [`${API_BASE}/api/analytics/keywords`, token] : null, 
     ([url, t]) => fetcher(url, t),
     { 
       revalidateOnFocus: false,
@@ -238,21 +204,38 @@ function DashboardContent() {
   )
   const scan = async () => {
     try {
-      const response = await fetch(`${API}/api/ops/scan`, { 
-        method: 'POST', 
-        headers: { 
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        } 
-      })
-      if (response.ok) {
-        alert('Scan enqueued')
-      } else {
-        alert('Failed to start scan')
+      const result = await apiClient.post('/api/ops/scan')
+      
+      if (result.method === 'celery') {
+        alert('✓ Scan started!\n\nThe scan is running in the background.\nNew posts will appear in 30-60 seconds.\n\nRefresh the page to see results.')
+        
+        // Auto-refresh after 30 seconds
+        setTimeout(() => {
+          mutatePosts()
+          mutateSummary()
+        }, 30000)
+      } else if (result.method === 'sync') {
+        const posts = result.created_posts || 0
+        const responses = result.created_responses || 0
+        if (result.error) {
+          alert(`⚠️ Scan completed with errors:\n${result.error}\n\nCreated: ${posts} posts, ${responses} responses`)
+        } else {
+          alert(`✓ Scan completed!\n\nFound: ${posts} new posts\nGenerated: ${responses} AI responses`)
+        }
+        
+        // Refresh immediately for sync
+        setTimeout(() => {
+          mutatePosts()
+          mutateSummary()
+        }, 1000)
       }
     } catch (error) {
       console.error('Scan error:', error)
-      alert('Error starting scan')
+      if (error instanceof APIClientError) {
+        alert(`Failed to start scan: ${error.message}`)
+      } else {
+        alert('Error starting scan. Check console for details.')
+      }
     }
   }
 
@@ -264,13 +247,7 @@ function DashboardContent() {
   const copy = async (id: number, content: string) => {
     try {
       await navigator.clipboard.writeText(content)
-      await fetch(`${API}/api/posts/responses/${id}/copied`, { 
-        method: 'POST', 
-        headers: { 
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        } 
-      })
+      await apiClient.post(`/api/posts/responses/${id}/copied`)
     } catch (error) {
       console.error('Copy error:', error)
     }
@@ -278,20 +255,14 @@ function DashboardContent() {
   
   const ack = async (id: number) => {
     try {
-      await fetch(`${API}/api/posts/responses/${id}/compliance`, { 
-        method: 'POST', 
-        headers: { 
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        } 
-      })
+      await apiClient.post(`/api/posts/responses/${id}/compliance`)
     } catch (error) {
       console.error('Ack error:', error)
     }
   }
 
-  // Show loading state to prevent hydration mismatch
-  if (isLoading || !token) {
+  // Show loading state during authentication check
+  if (authLoading) {
     return (
       <Layout>
         <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -304,12 +275,21 @@ function DashboardContent() {
     )
   }
 
+  // Don't render if not authenticated (redirect will happen)
+  if (!isAuthenticated) {
+    return null
+  }
+
   return (
     <MobileResponsiveLayout>
-      <RealTimeNotifications />
-      
-      {/* System Monitoring Status */}
-      <MonitoringStatus className="mb-6" />
+      {/* Authentication Error Display */}
+      {authError && (
+        <AuthErrorDisplay 
+          error={authError}
+          onLogin={() => router.push('/')}
+          className="mb-4"
+        />
+      )}
       
       <div className="grid gap-4 grid-cols-1 md:grid-cols-4">
         <div className="bg-white border rounded-xl p-4 shadow-sm">
@@ -338,54 +318,11 @@ function DashboardContent() {
 
       {/* Analytics Charts */}
       <div className="mt-8 mb-8">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-4 space-y-2 md:space-y-0">
+        <div className="mb-4">
           <h2 className="text-lg font-semibold">Analytics Overview</h2>
-          <div className="flex items-center space-x-2">
-            <button
-              onClick={() => setViewMode('classic')}
-              className={`px-3 py-1 text-sm rounded transition-colors ${
-                viewMode === 'classic' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-              }`}
-            >
-              Classic
-            </button>
-            <button
-              onClick={() => setViewMode('enhanced')}
-              className={`px-3 py-1 text-sm rounded transition-colors ${
-                viewMode === 'enhanced' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-              }`}
-            >
-              Enhanced
-            </button>
-            <button
-              onClick={() => setViewMode('dashboard')}
-              className={`px-3 py-1 text-sm rounded transition-colors ${
-                viewMode === 'dashboard' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-              }`}
-            >
-              Dashboard
-            </button>
-            <div className="border-l pl-2 ml-2">
-              <button
-                onClick={() => setPerformanceMonitorEnabled(!performanceMonitorEnabled)}
-                className={`px-2 py-1 text-xs rounded transition-colors ${
-                  performanceMonitorEnabled ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                }`}
-                title="Toggle performance monitoring"
-              >
-                {performanceMonitorEnabled ? 'Perf ON' : 'Perf OFF'}
-              </button>
-            </div>
-          </div>
         </div>
         
-        {viewMode === 'dashboard' ? (
-          <AnalyticsDashboard token={token!} />
-        ) : viewMode === 'enhanced' ? (
-          <EnhancedAnalyticsCharts data={summary} />
-        ) : (
-          <AnalyticsCharts data={summary} />
-        )}
+        <AnalyticsDashboard token={token!} />
       </div>
 
       {/* Keyword Insights */}
@@ -520,25 +457,12 @@ function DashboardContent() {
           })}
         </div>
       )}
-
-      {/* Performance Monitor */}
-      <PerformanceMonitor 
-        enabled={performanceMonitorEnabled}
-        maxDataPoints={1000}
-      />
     </MobileResponsiveLayout>
   )
 }
 
 export default function Dashboard() {
-  const [token, setToken] = useState<string | null>(null)
-
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const t = localStorage.getItem('token')
-      setToken(t)
-    }
-  }, [])
+  const { token } = useAuth()
 
   return (
     <WebSocketProvider token={token}>

@@ -149,7 +149,7 @@ class ConnectionManager:
         return False
     
     async def connect(self, websocket: WebSocket, client_id: int, user_id: int):
-        """Accept a new WebSocket connection with enhanced monitoring"""
+        """Accept a new WebSocket connection with enhanced monitoring and authentication confirmation"""
         try:
             await websocket.accept()
             
@@ -158,6 +158,7 @@ class ConnectionManager:
             
             self.active_connections[client_id].add(websocket)
             connection_time = datetime.utcnow()
+            connection_id = id(websocket)
             
             self.connection_info[websocket] = {
                 'client_id': client_id,
@@ -165,7 +166,10 @@ class ConnectionManager:
                 'connected_at': connection_time,
                 'last_activity': connection_time,
                 'messages_sent': 0,
-                'messages_received': 0
+                'messages_received': 0,
+                'connection_id': connection_id,
+                'authentication_confirmed': True,
+                'health_status': 'healthy'
             }
             
             # Update statistics
@@ -176,21 +180,54 @@ class ConnectionManager:
             # Start health monitoring
             await self.health_monitor.start_health_monitoring(websocket)
             
-            # Send initial connection confirmation with status
-            await self.send_personal_message({
-                'type': 'connection_confirmed',
+            # Send initial connection confirmation with comprehensive status
+            connection_status = {
+                'type': 'connection_established',
                 'client_id': client_id,
                 'user_id': user_id,
+                'connection_id': connection_id,
                 'server_time': connection_time.isoformat(),
-                'connection_id': id(websocket),
-                'status': {
+                'authentication': {
+                    'status': 'confirmed',
+                    'client_scoped': True,
+                    'user_verified': True
+                },
+                'service_status': {
                     'redis_connected': self.redis_client is not None,
-                    'health_monitoring': True,
-                    'ping_interval': self.health_monitor.ping_interval
+                    'health_monitoring_active': True,
+                    'ping_interval_seconds': self.health_monitor.ping_interval,
+                    'ping_timeout_seconds': self.health_monitor.ping_timeout,
+                    'max_missed_pings': self.health_monitor.max_missed_pings
+                },
+                'connection_info': {
+                    'total_connections': self.connection_stats['current_connections'],
+                    'client_connections': len(self.active_connections[client_id]),
+                    'uptime_start': self.connection_stats['uptime_start'].isoformat()
                 }
-            }, websocket)
+            }
             
-            logger.info(f"WebSocket connected: client_id={client_id}, user_id={user_id}")
+            await self.send_personal_message(connection_status, websocket)
+            
+            # Send welcome message with available features
+            welcome_message = {
+                'type': 'welcome',
+                'message': 'WebSocket connection established successfully',
+                'available_features': [
+                    'real_time_notifications',
+                    'health_monitoring',
+                    'connection_statistics',
+                    'ping_pong_heartbeat',
+                    'automatic_reconnection_support'
+                ],
+                'supported_message_types': [
+                    'ping', 'pong', 'subscribe', 'get_stats', 
+                    'get_monitoring_status', 'health_check'
+                ]
+            }
+            
+            await self.send_personal_message(welcome_message, websocket)
+            
+            logger.info(f"WebSocket connected and authenticated: client_id={client_id}, user_id={user_id}, connection_id={connection_id}")
             
         except Exception as e:
             logger.error(f"Failed to establish WebSocket connection: {e}")
@@ -485,7 +522,7 @@ async def websocket_endpoint(websocket: WebSocket, client_id: int, user_id: int)
 
 
 async def handle_websocket_message(websocket: WebSocket, message: dict, client_id: int, user_id: int):
-    """Handle incoming WebSocket messages from clients with enhanced functionality"""
+    """Handle incoming WebSocket messages from clients with enhanced functionality and lifecycle management"""
     message_type = message.get('type')
     
     # Update connection activity
@@ -494,15 +531,29 @@ async def handle_websocket_message(websocket: WebSocket, message: dict, client_i
         manager.connection_info[websocket]['last_activity'] = datetime.utcnow()
     
     if message_type == 'ping':
+        # Handle client ping with enhanced response
+        client_timestamp = message.get('timestamp', time.time())
+        server_timestamp = time.time()
+        
         await manager.send_personal_message({
             'type': 'pong',
-            'timestamp': message.get('timestamp', time.time())
+            'client_timestamp': client_timestamp,
+            'server_timestamp': server_timestamp,
+            'round_trip_time': server_timestamp - client_timestamp if isinstance(client_timestamp, (int, float)) else None,
+            'connection_healthy': manager.health_monitor.is_healthy(websocket)
         }, websocket)
     
     elif message_type == 'pong':
         # Handle pong response for health monitoring
-        timestamp = message.get('timestamp')
+        timestamp = message.get('timestamp') or message.get('server_timestamp')
         manager.health_monitor.handle_pong(websocket, timestamp)
+        
+        # Send acknowledgment
+        await manager.send_personal_message({
+            'type': 'pong_acknowledged',
+            'timestamp': datetime.utcnow().isoformat(),
+            'health_status': 'healthy'
+        }, websocket)
         
     elif message_type == 'subscribe':
         # Handle subscription to specific event types
@@ -510,7 +561,9 @@ async def handle_websocket_message(websocket: WebSocket, message: dict, client_i
         await manager.send_personal_message({
             'type': 'subscribed',
             'events': event_types,
-            'client_id': client_id
+            'client_id': client_id,
+            'subscription_active': True,
+            'timestamp': datetime.utcnow().isoformat()
         }, websocket)
     
     elif message_type == 'get_stats':
@@ -518,7 +571,12 @@ async def handle_websocket_message(websocket: WebSocket, message: dict, client_i
         stats = manager.get_connection_stats()
         await manager.send_personal_message({
             'type': 'stats',
-            'data': stats
+            'data': stats,
+            'requested_by': {
+                'client_id': client_id,
+                'user_id': user_id,
+                'connection_id': manager.connection_info[websocket].get('connection_id', id(websocket))
+            }
         }, websocket)
     
     elif message_type == 'get_monitoring_status':
@@ -526,26 +584,95 @@ async def handle_websocket_message(websocket: WebSocket, message: dict, client_i
         status = manager.get_monitoring_status()
         await manager.send_personal_message({
             'type': 'monitoring_status',
-            'data': status
+            'data': status,
+            'requested_by': {
+                'client_id': client_id,
+                'user_id': user_id
+            }
         }, websocket)
     
     elif message_type == 'health_check':
-        # Respond with connection health information
-        health_info = {
+        # Respond with comprehensive connection health information
+        connection_info = manager.connection_info.get(websocket, {})
+        health_info = manager.health_monitor.connection_health.get(websocket, {})
+        
+        health_response = {
             'connection_healthy': manager.health_monitor.is_healthy(websocket),
             'server_time': datetime.utcnow().isoformat(),
-            'connection_uptime': (datetime.utcnow() - manager.connection_info[websocket]['connected_at']).total_seconds() if websocket in manager.connection_info else 0,
-            'messages_sent': manager.connection_info[websocket]['messages_sent'] if websocket in manager.connection_info else 0,
-            'messages_received': manager.connection_info[websocket]['messages_received'] if websocket in manager.connection_info else 0
+            'connection_info': {
+                'connection_id': connection_info.get('connection_id', id(websocket)),
+                'connected_at': connection_info.get('connected_at', datetime.utcnow()).isoformat(),
+                'uptime_seconds': (datetime.utcnow() - connection_info.get('connected_at', datetime.utcnow())).total_seconds(),
+                'messages_sent': connection_info.get('messages_sent', 0),
+                'messages_received': connection_info.get('messages_received', 0),
+                'last_activity': connection_info.get('last_activity', datetime.utcnow()).isoformat()
+            },
+            'health_metrics': {
+                'last_ping': datetime.fromtimestamp(health_info['last_ping']).isoformat() if health_info.get('last_ping') else None,
+                'last_pong': datetime.fromtimestamp(health_info['last_pong']).isoformat() if health_info.get('last_pong') else None,
+                'missed_pings': health_info.get('missed_pings', 0),
+                'ping_interval_seconds': manager.health_monitor.ping_interval,
+                'ping_timeout_seconds': manager.health_monitor.ping_timeout
+            },
+            'client_info': {
+                'client_id': client_id,
+                'user_id': user_id,
+                'authentication_confirmed': connection_info.get('authentication_confirmed', False)
+            }
         }
+        
         await manager.send_personal_message({
             'type': 'health_response',
-            'data': health_info
+            'data': health_response
+        }, websocket)
+    
+    elif message_type == 'connection_test':
+        # Handle connection test requests
+        test_data = message.get('test_data', {})
+        
+        await manager.send_personal_message({
+            'type': 'connection_test_response',
+            'original_data': test_data,
+            'server_response': {
+                'status': 'success',
+                'timestamp': datetime.utcnow().isoformat(),
+                'connection_id': manager.connection_info[websocket].get('connection_id', id(websocket)),
+                'echo_test': 'Connection test successful'
+            }
+        }, websocket)
+    
+    elif message_type == 'get_connection_info':
+        # Send detailed connection information
+        connection_info = manager.connection_info.get(websocket, {})
+        
+        await manager.send_personal_message({
+            'type': 'connection_info',
+            'data': {
+                'connection_id': connection_info.get('connection_id', id(websocket)),
+                'client_id': client_id,
+                'user_id': user_id,
+                'connected_at': connection_info.get('connected_at', datetime.utcnow()).isoformat(),
+                'authentication_status': 'confirmed',
+                'service_features': {
+                    'health_monitoring': True,
+                    'real_time_notifications': True,
+                    'redis_pub_sub': manager.redis_client is not None,
+                    'connection_statistics': True
+                }
+            }
         }, websocket)
     
     else:
+        # Handle unknown message types with helpful error response
         await manager.send_personal_message({
             'type': 'error',
+            'error_code': 'UNKNOWN_MESSAGE_TYPE',
             'message': f'Unknown message type: {message_type}',
-            'received_message': message
+            'received_message': message,
+            'supported_types': [
+                'ping', 'pong', 'subscribe', 'get_stats', 
+                'get_monitoring_status', 'health_check', 
+                'connection_test', 'get_connection_info'
+            ],
+            'timestamp': datetime.utcnow().isoformat()
         }, websocket)

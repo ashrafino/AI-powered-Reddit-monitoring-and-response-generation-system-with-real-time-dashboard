@@ -1,53 +1,43 @@
 import useSWR from 'swr'
 import { useEffect, useState } from 'react'
-import Router from 'next/router'
+import { useRouter } from 'next/router'
 import Layout from '../components/Layout'
-import { API_BASE } from '../utils/apiBase'
+import { useAuth } from '../utils/authContext'
+import { apiClient, APIClientError } from '../utils/apiBase'
+import { AuthErrorDisplay } from '../components/AuthErrorDisplay'
 
-const API = API_BASE
-
-const fetcher = async (url: string, token: string) => {
-  const response = await fetch(url, { 
-    headers: { 
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json'
-    } 
-  })
-  
-  if (!response.ok) {
-    if (response.status === 401) {
-      // Token expired or invalid, redirect to login
-      localStorage.removeItem('token')
-      window.location.href = '/'
-      throw new Error('Unauthorized')
+const fetcher = async (url: string) => {
+  try {
+    return await apiClient.get(url)
+  } catch (error) {
+    if (error instanceof APIClientError && error.isAuthError) {
+      // Auth errors are handled by the auth context
+      throw error
     }
-    throw new Error(`HTTP error! status: ${response.status}`)
+    throw error
   }
-  
-  return response.json()
 }
 
 export default function Configs() {
-  const [token, setToken] = useState<string | null>(null)
+  const { isAuthenticated, isLoading: authLoading, error: authError } = useAuth()
   const [clientId, setClientId] = useState('')
   const [subreddits, setSubs] = useState('')
   const [keywords, setKeywords] = useState('')
   const [redditUsername, setRedditUsername] = useState('')
   const [isActive, setIsActive] = useState(true)
   const [editingId, setEditingId] = useState<number | null>(null)
+  const router = useRouter()
+
+  // Redirect to login if not authenticated
   useEffect(() => {
-    // Check if we're in browser before accessing localStorage
-    if (typeof window !== 'undefined') {
-      const t = localStorage.getItem('token')
-      setToken(t)
-      if (!t) {
-        Router.replace('/')
-      }
+    if (!authLoading && !isAuthenticated) {
+      router.replace('/')
     }
-  }, [])
+  }, [isAuthenticated, authLoading, router])
+
   const { data: configs, error: configsError, mutate } = useSWR(
-    token ? [`${API}/api/configs`, token] : null, 
-    ([url, t]) => fetcher(url, t),
+    isAuthenticated ? '/api/configs' : null, 
+    fetcher,
     { 
       revalidateOnFocus: false,
       revalidateOnReconnect: true,
@@ -62,36 +52,28 @@ export default function Configs() {
     }
     
     try {
-      const response = await fetch(`${API}/api/configs`, {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json', 
-          'Authorization': `Bearer ${token}` 
-        },
-        body: JSON.stringify({ 
-          client_id: Number(clientId), 
-          reddit_username: redditUsername || null,
-          reddit_subreddits: subreddits.split(',').map(s => s.trim()).filter(s => s), 
-          keywords: keywords.split(',').map(k => k.trim()).filter(k => k),
-          is_active: isActive
-        })
+      await apiClient.post('/api/configs', { 
+        client_id: Number(clientId), 
+        reddit_username: redditUsername || null,
+        reddit_subreddits: subreddits.split(',').map(s => s.trim()).filter(s => s), 
+        keywords: keywords.split(',').map(k => k.trim()).filter(k => k),
+        is_active: isActive
       })
       
-      if (response.ok) {
-        setClientId('')
-        setSubs('')
-        setKeywords('')
-        setRedditUsername('')
-        setIsActive(true)
-        mutate()
-        alert('Configuration created successfully')
-      } else {
-        const errorText = await response.text()
-        alert(`Failed to create configuration: ${errorText}`)
-      }
+      setClientId('')
+      setSubs('')
+      setKeywords('')
+      setRedditUsername('')
+      setIsActive(true)
+      mutate()
+      alert('Configuration created successfully')
     } catch (error) {
       console.error('Create config error:', error)
-      alert('Error creating configuration')
+      if (error instanceof APIClientError) {
+        alert(`Failed to create configuration: ${error.message}`)
+      } else {
+        alert('Error creating configuration')
+      }
     }
   }
 
@@ -108,25 +90,14 @@ export default function Configs() {
   const saveEdit = async () => {
     if (!editingId) return
     try {
-      const response = await fetch(`${API}/api/configs/${editingId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          client_id: clientId ? Number(clientId) : undefined,
-          reddit_username: redditUsername || null,
-          reddit_subreddits: subreddits ? subreddits.split(',').map(s => s.trim()).filter(Boolean) : undefined,
-          keywords: keywords ? keywords.split(',').map(k => k.trim()).filter(Boolean) : undefined,
-          is_active: isActive
-        })
+      await apiClient.put(`/api/configs/${editingId}`, {
+        client_id: clientId ? Number(clientId) : undefined,
+        reddit_username: redditUsername || null,
+        reddit_subreddits: subreddits ? subreddits.split(',').map(s => s.trim()).filter(Boolean) : undefined,
+        keywords: keywords ? keywords.split(',').map(k => k.trim()).filter(Boolean) : undefined,
+        is_active: isActive
       })
-      if (!response.ok) {
-        const errorText = await response.text()
-        alert(`Failed to update configuration: ${errorText}`)
-        return
-      }
+      
       setEditingId(null)
       setClientId('')
       setRedditUsername('')
@@ -153,26 +124,21 @@ export default function Configs() {
   const remove = async (id: number) => {
     if (!confirm('Delete this configuration?')) return
     try {
-      const response = await fetch(`${API}/api/configs/${id}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      })
-      if (!response.ok) {
-        const errorText = await response.text()
-        alert(`Failed to delete configuration: ${errorText}`)
-        return
-      }
+      await apiClient.delete(`/api/configs/${id}`)
       mutate()
       alert('Configuration deleted')
     } catch (err) {
       console.error('Delete config error:', err)
-      alert('Error deleting configuration')
+      if (err instanceof APIClientError) {
+        alert(`Failed to delete configuration: ${err.message}`)
+      } else {
+        alert('Error deleting configuration')
+      }
     }
   }
 
-  if (!token) {
+  // Show loading state during authentication check
+  if (authLoading) {
     return (
       <Layout>
         <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -185,11 +151,25 @@ export default function Configs() {
     )
   }
 
+  // Don't render if not authenticated (redirect will happen)
+  if (!isAuthenticated) {
+    return null
+  }
+
   return (
     <Layout>
       <h2 className="text-lg font-semibold mb-3">Configs</h2>
       
-      {/* Error handling */}
+      {/* Authentication Error Display */}
+      {authError && (
+        <AuthErrorDisplay 
+          error={authError}
+          onLogin={() => router.push('/')}
+          className="mb-4"
+        />
+      )}
+      
+      {/* Config Loading Error */}
       {configsError && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
           <p className="text-red-600">

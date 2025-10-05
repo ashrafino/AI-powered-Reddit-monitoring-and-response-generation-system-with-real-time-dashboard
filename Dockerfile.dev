@@ -1,0 +1,34 @@
+# Development Dockerfile with dependency caching
+FROM python:3.11-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1
+
+WORKDIR /app
+
+# Install system dependencies including build tools for ARM compatibility
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    gcc \
+    g++ \
+    python3-dev \
+    libpq-dev \
+    libpq5 \
+    curl \
+    netcat-traditional \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy and install Python dependencies first (for caching)
+COPY requirements.txt .
+RUN pip install --upgrade pip && \
+    pip install -r requirements.txt
+
+# Copy application code
+COPY . .
+
+# Expose port
+EXPOSE 8001
+
+# Default command for development
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8001", "--reload"]

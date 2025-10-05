@@ -1,0 +1,93 @@
+{
+  "total_tests": 12,
+  "passed_tests": 12,
+  "failed_tests": 0,
+  "success_rate": 100.0,
+  "test_results": [
+    {
+      "test_name": "User Registration",
+      "success": true,
+      "details": "User client@example.com already exists",
+      "error": "",
+      "timestamp": "2025-10-02T18:58:43.895948+00:00"
+    },
+    {
+      "test_name": "User Login",
+      "success": true,
+      "details": "Login successful, token expires: 2025-10-02T19:58:44+00:00",
+      "error": "",
+      "timestamp": "2025-10-02T18:58:44.145222+00:00"
+    },
+    {
+      "test_name": "Admin Login",
+      "success": true,
+      "details": "Admin login successful",
+      "error": "",
+      "timestamp": "2025-10-02T18:58:44.378708+00:00"
+    },
+    {
+      "test_name": "API Authentication",
+      "success": true,
+      "details": "Successfully accessed protected endpoint",
+      "error": "",
+      "timestamp": "2025-10-02T18:58:44.385192+00:00"
+    },
+    {
+      "test_name": "API Without Token",
+      "success": true,
+      "details": "Correctly rejected request without token (401)",
+      "error": "",
+      "timestamp": "2025-10-02T18:58:44.386750+00:00"
+    },
+    {
+      "test_name": "API Invalid Token",
+      "success": true,
+      "details": "Correctly rejected request with invalid token (401)",
+      "error": "",
+      "timestamp": "2025-10-02T18:58:44.391525+00:00"
+    },
+    {
+      "test_name": "WebSocket Authentication",
+      "success": true,
+      "details": "WebSocket connected and received response: connection_established",
+      "error": "",
+      "timestamp": "2025-10-02T18:58:44.412299+00:00"
+    },
+    {
+      "test_name": "WebSocket Without Token",
+      "success": true,
+      "details": "Correctly rejected WebSocket without token",
+      "error": "",
+      "timestamp": "2025-10-02T18:58:44.416781+00:00"
+    },
+    {
+      "test_name": "WebSocket Invalid Token",
+      "success": true,
+      "details": "Correctly rejected WebSocket with invalid token",
+      "error": "",
+      "timestamp": "2025-10-02T18:58:44.421802+00:00"
+    },
+    {
+      "test_name": "Debug Endpoints",
+      "success": true,
+      "details": "Debug endpoint accessible, token status: success",
+      "error": "",
+      "timestamp": "2025-10-02T18:58:44.426667+00:00"
+    },
+    {
+      "test_name": "Error Handling",
+      "success": true,
+      "details": "Error responses have proper structure",
+      "error": "",
+      "timestamp": "2025-10-02T18:58:44.431024+00:00"
+    },
+    {
+      "test_name": "Client Data Isolation",
+      "success": true,
+      "details": "Client-scoped endpoint responded appropriately: 200",
+      "error": "",
+      "timestamp": "2025-10-02T18:58:44.436646+00:00"
+    }
+  ],
+  "overall_success": true
+}

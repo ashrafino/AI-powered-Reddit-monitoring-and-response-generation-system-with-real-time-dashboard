@@ -35,15 +35,14 @@ services:
       start_period: 10s
     restart: unless-stopped
 
-  # Fast development backend - no build, just run from source
+  # Development backend with cached dependencies
   backend-dev:
-    image: python:3.11-slim
-    working_dir: /app
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
     env_file: .env
     command: >
       bash -c "
-        apt-get update && apt-get install -y --no-install-recommends libpq5 curl netcat-traditional &&
-        pip install --no-cache-dir -r requirements.txt &&
         echo 'Waiting for database...' &&
         python -m app.scripts.db &&
         echo 'Creating admin user...' &&
@@ -59,8 +58,8 @@ services:
       redis:
         condition: service_healthy
     volumes:
-      - ./:/app
-      - pip_cache:/root/.cache/pip
+      - ./app:/app/app
+      - ./requirements.txt:/app/requirements.txt
     environment:
       - DATABASE_URL=postgresql://postgres:postgres@postgres/redditbot
       - REDIS_URL=redis://:${REDIS_PASSWORD:-redispass}@redis:6379/0
@@ -72,15 +71,14 @@ services:
       - ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin123}
     restart: unless-stopped
 
-  # Fast development worker
+  # Development worker with cached dependencies
   worker-dev:
-    image: python:3.11-slim
-    working_dir: /app
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
     env_file: .env
     command: >
       bash -c "
-        apt-get update && apt-get install -y --no-install-recommends libpq5 curl &&
-        pip install --no-cache-dir -r requirements.txt &&
         echo 'Waiting for backend...' &&
         until curl -f http://backend-dev:8001/api/health; do sleep 5; done &&
         echo 'Starting Celery worker...' &&
@@ -99,19 +97,17 @@ services:
       - APP_ENV=development
       - SECRET_KEY=${SECRET_KEY:-your-secret-key-change-this-in-production}
     volumes:
-      - ./:/app
-      - pip_cache:/root/.cache/pip
+      - ./app:/app/app
     restart: unless-stopped
 
-  # Fast development beat scheduler
+  # Development beat scheduler with cached dependencies
   beat-dev:
-    image: python:3.11-slim
-    working_dir: /app
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
     env_file: .env
     command: >
       bash -c "
-        apt-get update && apt-get install -y --no-install-recommends libpq5 curl &&
-        pip install --no-cache-dir -r requirements.txt &&
         echo 'Waiting for backend...' &&
         until curl -f http://backend-dev:8001/api/health; do sleep 5; done &&
         echo 'Starting Celery beat...' &&
@@ -131,8 +127,7 @@ services:
       - APP_ENV=development
       - SECRET_KEY=${SECRET_KEY:-your-secret-key-change-this-in-production}
     volumes:
-      - ./:/app
-      - pip_cache:/root/.cache/pip
+      - ./app:/app/app
     restart: unless-stopped
 
   # Development frontend with hot reload
@@ -157,5 +152,4 @@ services:
 volumes:
   postgres_data:
   redis_data:
-  pip_cache:
   node_modules:

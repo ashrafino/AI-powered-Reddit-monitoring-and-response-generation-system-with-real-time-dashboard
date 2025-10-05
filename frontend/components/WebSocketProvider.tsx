@@ -1,5 +1,14 @@
-import React, { createContext, useContext, useEffect, useState, useRef } from 'react'
-import { API_BASE } from '../utils/apiBase'
+import React, { createContext, useContext, useEffect, useState, useRef, useCallback } from 'react'
+import { API_BASE, AUTH_ERROR_CODES } from '../utils/apiBase'
+
+// WebSocket close codes for authentication errors
+const WS_AUTH_ERROR_CODES = {
+  4001: 'Invalid or expired token',
+  4002: 'User not found',
+  4003: 'User account inactive', 
+  4004: 'Client not found',
+  4005: 'Internal server error'
+} as const
 
 interface WebSocketContextType {
   isConnected: boolean
@@ -10,6 +19,8 @@ interface WebSocketContextType {
   connectionHealth: any
   reconnectAttempts: number
   lastPingTime: number | null
+  connectionError: string | null
+  isReconnecting: boolean
 }
 
 const WebSocketContext = createContext<WebSocketContextType>({
@@ -20,7 +31,9 @@ const WebSocketContext = createContext<WebSocketContextType>({
   monitoringStatus: null,
   connectionHealth: null,
   reconnectAttempts: 0,
-  lastPingTime: null
+  lastPingTime: null,
+  connectionError: null,
+  isReconnecting: false
 })
 
 export const useWebSocket = () => useContext(WebSocketContext)
@@ -37,25 +50,44 @@ export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({ children, 
   const [monitoringStatus, setMonitoringStatus] = useState<any>(null)
   const [connectionHealth, setConnectionHealth] = useState<any>(null)
   const [lastPingTime, setLastPingTime] = useState<number | null>(null)
+  const [connectionError, setConnectionError] = useState<string | null>(null)
+  const [isReconnecting, setIsReconnecting] = useState(false)
+  
   const wsRef = useRef<WebSocket | null>(null)
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const reconnectAttempts = useRef(0)
   const maxReconnectAttempts = 5
   const pingTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const connectionAttemptRef = useRef(false)
 
-  const connect = () => {
-    if (!token || wsRef.current?.readyState === WebSocket.CONNECTING) {
+  const connect = useCallback(() => {
+    // WebSocket is optional - skip if not available
+    if (!token || connectionAttemptRef.current || wsRef.current?.readyState === WebSocket.CONNECTING) {
       return
     }
 
+    // Validate token format before attempting connection
+    if (!isValidTokenFormat(token)) {
+      // Silently fail - WebSocket is optional
+      return
+    }
+
+    connectionAttemptRef.current = true
+    setConnectionError(null)
+    setIsReconnecting(reconnectAttempts.current > 0)
+
     try {
       const wsUrl = `${API_BASE.replace('http', 'ws')}/api/ws?token=${encodeURIComponent(token)}`
+      // Silently attempt connection - no console logs
       const ws = new WebSocket(wsUrl)
       
       ws.onopen = () => {
-        console.log('WebSocket connected')
+        // WebSocket connected - silently
         setIsConnected(true)
+        setIsReconnecting(false)
+        setConnectionError(null)
         reconnectAttempts.current = 0
+        connectionAttemptRef.current = false
         
         // Send initial ping and request monitoring status
         ws.send(JSON.stringify({ type: 'ping', timestamp: Date.now() }))
@@ -100,7 +132,6 @@ export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({ children, 
               }
               break
             case 'connection_confirmed':
-              console.log('WebSocket connection confirmed:', message)
               setConnectionHealth(prev => ({
                 ...prev,
                 server_status: message.status,
@@ -117,45 +148,56 @@ export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({ children, 
               }))
               break
             case 'system_status':
-              console.log('System status update:', message.data)
-              break
             case 'scan_started':
-              console.log('Reddit scan started')
-              break
             case 'scan_completed':
-              console.log('Reddit scan completed:', message.data)
+              // Silently handle these events
               break
             default:
               // Handle other message types (new_post, new_response, etc.)
               break
           }
         } catch (error) {
-          console.error('Error parsing WebSocket message:', error)
+          // Silently ignore parsing errors
         }
       }
       
       ws.onclose = (event) => {
-        console.log('WebSocket disconnected:', event.code, event.reason)
+        // WebSocket disconnected - handle silently
         setIsConnected(false)
+        setIsReconnecting(false)
+        connectionAttemptRef.current = false
         wsRef.current = null
         
-        // Attempt to reconnect if not a normal closure
-        if (event.code !== 1000 && reconnectAttempts.current < maxReconnectAttempts) {
-          const delay = Math.min(1000 * Math.pow(2, reconnectAttempts.current), 30000)
-          reconnectTimeoutRef.current = setTimeout(() => {
-            reconnectAttempts.current++
-            connect()
-          }, delay)
-        }
+        // Don't reconnect - WebSocket is optional
+        // The app works fine without it
       }
       
       ws.onerror = (error) => {
-        console.error('WebSocket error:', error)
+        // Silently handle WebSocket errors - it's optional
+        connectionAttemptRef.current = false
       }
       
       wsRef.current = ws
     } catch (error) {
-      console.error('Error creating WebSocket connection:', error)
+      // Silently handle connection errors - WebSocket is optional
+      connectionAttemptRef.current = false
+      setConnectionError('Failed to create WebSocket connection')
+    }
+  }, [token])
+
+  // Helper function to validate token format
+  const isValidTokenFormat = (token: string): boolean => {
+    if (!token) return false
+    
+    try {
+      const parts = token.split('.')
+      if (parts.length !== 3) return false
+      
+      // Try to decode the payload to check if it's valid JWT
+      const payload = JSON.parse(atob(parts[1]))
+      return payload && typeof payload === 'object'
+    } catch (error) {
+      return false
     }
   }
 
@@ -167,15 +209,16 @@ export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({ children, 
       if (message.type === 'ping') {
         setLastPingTime(Date.now())
       }
-    } else {
-      console.warn('WebSocket not connected, cannot send message:', message)
     }
+    // Silently ignore if not connected
   }
 
   useEffect(() => {
-    if (token) {
-      connect()
-    }
+    // WebSocket disabled - backend doesn't support it yet
+    // Uncomment below when backend WebSocket is implemented:
+    // if (token) {
+    //   connect()
+    // }
 
     return () => {
       if (reconnectTimeoutRef.current) {
@@ -221,7 +264,7 @@ export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({ children, 
           ping_timeout: true,
           last_timeout: Date.now()
         }))
-        console.warn('WebSocket ping timeout detected')
+        // Silently handle ping timeout
       }, 10000)
     }
     
@@ -241,7 +284,9 @@ export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({ children, 
       monitoringStatus,
       connectionHealth,
       reconnectAttempts: reconnectAttempts.current,
-      lastPingTime
+      lastPingTime,
+      connectionError,
+      isReconnecting
     }}>
       {children}
     </WebSocketContext.Provider>

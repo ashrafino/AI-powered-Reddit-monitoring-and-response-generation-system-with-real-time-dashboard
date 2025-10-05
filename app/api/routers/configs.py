@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from typing import List
 
-from app.api.deps import get_current_user
+from app.api.deps import get_current_user, get_current_user_with_client
 from app.db.session import get_db
 from app.models.config import ClientConfig
 from app.schemas.config import ClientConfigCreate, ClientConfigOut, ClientConfigUpdate
@@ -17,9 +17,10 @@ def list_to_csv(values: List[str] | None) -> str | None:
 
 
 @router.post("/", response_model=ClientConfigOut)
-def create_config(payload: ClientConfigCreate, db: Session = Depends(get_db), user = Depends(get_current_user)):
+def create_config(payload: ClientConfigCreate, db: Session = Depends(get_db), user_client = Depends(get_current_user_with_client)):
+    user, user_client_id = user_client
     # client users can only create for their own client
-    if user.role != "admin" and payload.client_id != user.client_id:
+    if user.role != "admin" and payload.client_id != user_client_id:
         raise HTTPException(status_code=403, detail="Forbidden")
     config = ClientConfig(
         client_id=payload.client_id,
@@ -38,10 +39,11 @@ def create_config(payload: ClientConfigCreate, db: Session = Depends(get_db), us
     return config
 
 @router.get("/", response_model=list[ClientConfigOut])
-def list_configs(db: Session = Depends(get_db), user = Depends(get_current_user)):
-    q = db.query(ClientConfig)
+def list_configs(db: Session = Depends(get_db), user_client = Depends(get_current_user_with_client)):
+    user, user_client_id = user_client
+    q = db.query(ClientConfig).options(joinedload(ClientConfig.client))
     if user.role != "admin":
-        q = q.filter(ClientConfig.client_id == user.client_id)
+        q = q.filter(ClientConfig.client_id == user_client_id)
     configs = q.order_by(ClientConfig.id.desc()).all()
     
     # Convert CSV strings back to lists for response
@@ -53,15 +55,16 @@ def list_configs(db: Session = Depends(get_db), user = Depends(get_current_user)
 
 
 @router.put("/{config_id}", response_model=ClientConfigOut)
-def update_config(config_id: int, payload: ClientConfigUpdate, db: Session = Depends(get_db), user = Depends(get_current_user)):
+def update_config(config_id: int, payload: ClientConfigUpdate, db: Session = Depends(get_db), user_client = Depends(get_current_user_with_client)):
+    user, user_client_id = user_client
     config = db.query(ClientConfig).filter(ClientConfig.id == config_id).first()
     if not config:
         raise HTTPException(status_code=404, detail="Not found")
-    if user.role != "admin" and config.client_id != user.client_id:
+    if user.role != "admin" and config.client_id != user_client_id:
         raise HTTPException(status_code=403, detail="Forbidden")
 
     if payload.client_id is not None:
-        if user.role != "admin" and payload.client_id != user.client_id:
+        if user.role != "admin" and payload.client_id != user_client_id:
             raise HTTPException(status_code=403, detail="Forbidden")
         config.client_id = payload.client_id
 
@@ -85,11 +88,12 @@ def update_config(config_id: int, payload: ClientConfigUpdate, db: Session = Dep
 
 
 @router.delete("/{config_id}")
-def delete_config(config_id: int, db: Session = Depends(get_db), user = Depends(get_current_user)):
+def delete_config(config_id: int, db: Session = Depends(get_db), user_client = Depends(get_current_user_with_client)):
+    user, user_client_id = user_client
     config = db.query(ClientConfig).filter(ClientConfig.id == config_id).first()
     if not config:
         raise HTTPException(status_code=404, detail="Not found")
-    if user.role != "admin" and config.client_id != user.client_id:
+    if user.role != "admin" and config.client_id != user_client_id:
         raise HTTPException(status_code=403, detail="Forbidden")
     db.delete(config)
     db.commit()
