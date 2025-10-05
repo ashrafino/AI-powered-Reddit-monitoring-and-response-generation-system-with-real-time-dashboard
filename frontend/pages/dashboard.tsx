@@ -194,8 +194,8 @@ function DashboardContent() {
   )
 
   const { data: keywordInsights, error: keywordError } = useSWR(
-    token ? [`${API_BASE}/api/analytics/keywords`, token] : null, 
-    ([url, t]) => fetcher(url, t),
+    token ? `${API_BASE}/api/analytics/keywords` : null, 
+    fetcher,
     { 
       revalidateOnFocus: false,
       revalidateOnReconnect: true,
