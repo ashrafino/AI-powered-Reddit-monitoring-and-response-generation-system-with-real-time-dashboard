@@ -240,8 +240,8 @@ function DashboardContent() {
   }
 
   // Safe data handling with proper null checks
-  const eventsTotal: number | string = summary?.events
-    ? Object.values(summary.events as Record<string, number>).reduce((a: number, b: any) => a + Number(b), 0)
+  const eventsTotal: number | string = (summary as any)?.events
+    ? Object.values((summary as any).events as Record<string, number>).reduce((a: number, b: any) => a + Number(b), 0)
     : '—'
 
   const copy = async (id: number, content: string) => {
