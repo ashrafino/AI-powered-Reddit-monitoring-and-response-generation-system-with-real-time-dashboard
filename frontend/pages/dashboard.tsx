@@ -294,22 +294,22 @@ function DashboardContent() {
       <div className="grid gap-4 grid-cols-1 md:grid-cols-4">
         <div className="bg-white border rounded-xl p-4 shadow-sm">
           <div className="text-sm text-gray-500">Posts</div>
-          <div className="text-2xl font-semibold">{summary?.posts ?? '—'}</div>
+          <div className="text-2xl font-semibold">{(summary as any)?.posts ?? '—'}</div>
         </div>
         <div className="bg-white border rounded-xl p-4 shadow-sm">
           <div className="text-sm text-gray-500">Responses</div>
-          <div className="text-2xl font-semibold">{summary?.responses ?? '—'}</div>
+          <div className="text-2xl font-semibold">{(summary as any)?.responses ?? '—'}</div>
         </div>
         <div className="bg-white border rounded-xl p-4 shadow-sm">
           <div className="text-sm text-gray-500">Copy Rate</div>
-          <div className="text-2xl font-semibold">{summary?.copy_rate ?? '—'}%</div>
+          <div className="text-2xl font-semibold">{(summary as any)?.copy_rate ?? '—'}%</div>
         </div>
         <div className="bg-white border rounded-xl p-4 shadow-sm">
           <div className="text-sm text-gray-500">Growth</div>
           <div className="text-2xl font-semibold">
-            {trends?.growth_rate ? (
-              <span className={trends.growth_rate >= 0 ? 'text-green-600' : 'text-red-600'}>
-                {trends.growth_rate > 0 ? '+' : ''}{trends.growth_rate}%
+            {(trends as any)?.growth_rate ? (
+              <span className={(trends as any).growth_rate >= 0 ? 'text-green-600' : 'text-red-600'}>
+                {(trends as any).growth_rate > 0 ? '+' : ''}{(trends as any).growth_rate}%
               </span>
             ) : '—'}
           </div>
@@ -326,12 +326,12 @@ function DashboardContent() {
       </div>
 
       {/* Keyword Insights */}
-      {keywordInsights && keywordInsights.length > 0 && (
+      {(keywordInsights as any) && (keywordInsights as any).length > 0 && (
         <div className="mt-8 mb-8">
           <h2 className="text-lg font-semibold mb-4">Keyword Performance</h2>
           <div className="bg-white border rounded-xl p-6 shadow-sm">
             <div className="space-y-4">
-              {keywordInsights.slice(0, 5).map((insight: any, index: number) => (
+              {(keywordInsights as any).slice(0, 5).map((insight: any, index: number) => (
                 <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                   <div>
                     <span className="font-medium">{insight.keyword}</span>
@@ -368,7 +368,7 @@ function DashboardContent() {
         <div>
           <h2 className="text-lg font-semibold">Matched Posts</h2>
           <p className="text-sm text-gray-600">
-            Showing {filteredPosts.length} of {posts?.length || 0} posts
+            Showing {filteredPosts.length} of {(posts as any)?.length || 0} posts
           </p>
         </div>
         <button onClick={scan} className="px-3 py-2 rounded-md bg-black text-white hover:bg-gray-800 transition-colors">
