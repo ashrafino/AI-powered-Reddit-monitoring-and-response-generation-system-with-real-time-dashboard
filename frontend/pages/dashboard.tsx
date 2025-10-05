@@ -184,8 +184,8 @@ function DashboardContent() {
   }
 
   const { data: trends, error: trendsError } = useSWR(
-    token ? [`${API_BASE}/api/analytics/trends`, token] : null, 
-    ([url, t]) => fetcher(url, t),
+    token ? `${API_BASE}/api/analytics/trends` : null, 
+    fetcher,
     { 
       revalidateOnFocus: false,
       revalidateOnReconnect: true,
@@ -204,9 +204,9 @@ function DashboardContent() {
   )
   const scan = async () => {
     try {
-      const result = await apiClient.post('/api/ops/scan')
+      const result = await apiClient.post('/api/ops/scan') as any
       
-      if (result.method === 'celery') {
+      if (result?.method === 'celery') {
         alert('✓ Scan started!\n\nThe scan is running in the background.\nNew posts will appear in 30-60 seconds.\n\nRefresh the page to see results.')
         
         // Auto-refresh after 30 seconds
@@ -214,7 +214,7 @@ function DashboardContent() {
           mutatePosts()
           mutateSummary()
         }, 30000)
-      } else if (result.method === 'sync') {
+      } else if (result?.method === 'sync') {
         const posts = result.created_posts || 0
         const responses = result.created_responses || 0
         if (result.error) {
