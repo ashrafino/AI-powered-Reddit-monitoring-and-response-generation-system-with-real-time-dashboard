@@ -53,6 +53,16 @@ export default function Configs() {
     }
   )
 
+  // Fetch available clients for admins
+  const { data: clients } = useSWR(
+    isAuthenticated && !user?.client_id ? '/api/clients' : null,
+    fetcher,
+    { 
+      revalidateOnFocus: false,
+      errorRetryCount: 3
+    }
+  )
+
   const create = async () => {
     if (!subreddits || !keywords) {
       alert('Please add at least one subreddit and one keyword')
@@ -215,19 +225,39 @@ export default function Configs() {
       <div className="bg-white border rounded-xl p-4 shadow-sm mb-4">
         <h3 className="font-medium mb-3">{editingId ? 'Edit Configuration' : 'Add New Configuration'}</h3>
         <div className="grid gap-3">
-          {/* Show client_id field only for admins without a client_id */}
+          {/* Show client selection for admins without a client_id */}
           {!user?.client_id && (
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Client ID <span className="text-red-500">*</span>
+                Client <span className="text-red-500">*</span>
               </label>
-              <input 
-                className="w-full border rounded-md px-3 py-2" 
-                placeholder="Enter client ID" 
-                value={clientId} 
-                onChange={e => setClientId(e.target.value)}
-                type="number"
-              />
+              {clients && clients.length > 0 ? (
+                <select 
+                  className="w-full border rounded-md px-3 py-2" 
+                  value={clientId} 
+                  onChange={e => setClientId(e.target.value)}
+                >
+                  <option value="">Select a client...</option>
+                  {clients.map((client: any) => (
+                    <option key={client.id} value={client.id}>
+                      {client.name} (ID: {client.id})
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <div className="space-y-2">
+                  <input 
+                    className="w-full border rounded-md px-3 py-2" 
+                    placeholder="Enter client ID" 
+                    value={clientId} 
+                    onChange={e => setClientId(e.target.value)}
+                    type="number"
+                  />
+                  <p className="text-xs text-orange-600">
+                    No clients found. You may need to create a client first, or enter an existing client ID.
+                  </p>
+                </div>
+              )}
               <p className="text-xs text-gray-500 mt-1">The client this configuration belongs to</p>
             </div>
           )}

@@ -18,25 +18,45 @@ def list_to_csv(values: List[str] | None) -> str | None:
 
 @router.post("/", response_model=ClientConfigOut)
 def create_config(payload: ClientConfigCreate, db: Session = Depends(get_db), user_client = Depends(get_current_user_with_client)):
+    from app.models.client import Client
+    
     user, user_client_id = user_client
     # client users can only create for their own client
     if user.role != "admin" and payload.client_id != user_client_id:
         raise HTTPException(status_code=403, detail="Forbidden")
-    config = ClientConfig(
-        client_id=payload.client_id,
-        reddit_username=payload.reddit_username,
-        reddit_subreddits=list_to_csv(payload.reddit_subreddits),
-        keywords=list_to_csv(payload.keywords),
-        is_active=payload.is_active,
-    )
-    db.add(config)
-    db.commit()
-    db.refresh(config)
     
-    # Convert back to list format for response
-    config.reddit_subreddits = payload.reddit_subreddits
-    config.keywords = payload.keywords
-    return config
+    # Validate that the client exists
+    client = db.query(Client).filter(Client.id == payload.client_id).first()
+    if not client:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Client with ID {payload.client_id} does not exist. Please create the client first or use an existing client ID."
+        )
+    
+    try:
+        config = ClientConfig(
+            client_id=payload.client_id,
+            reddit_username=payload.reddit_username,
+            reddit_subreddits=list_to_csv(payload.reddit_subreddits),
+            keywords=list_to_csv(payload.keywords),
+            is_active=payload.is_active,
+        )
+        db.add(config)
+        db.commit()
+        db.refresh(config)
+        
+        # Convert back to list format for response
+        config.reddit_subreddits = payload.reddit_subreddits
+        config.keywords = payload.keywords
+        return config
+    except Exception as e:
+        db.rollback()
+        # Log the actual error for debugging
+        print(f"Error creating config: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to create configuration: {str(e)}"
+        )
 
 @router.get("/", response_model=list[ClientConfigOut])
 def list_configs(db: Session = Depends(get_db), user_client = Depends(get_current_user_with_client)):
