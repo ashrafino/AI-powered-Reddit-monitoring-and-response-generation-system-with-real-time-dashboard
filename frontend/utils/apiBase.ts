@@ -236,7 +236,8 @@ export class APIClient {
     };
     
     // Use body from options if provided, otherwise stringify data
-    if (!requestOptions.body && data) {
+    // Check options.body first (for form data), then fall back to data
+    if (!requestOptions.body && data !== undefined) {
       requestOptions.body = JSON.stringify(data);
     }
     
