@@ -59,16 +59,24 @@ export default function Configs() {
       return
     }
     
-    // Use user's client_id if not explicitly set
-    const effectiveClientId = clientId || (user?.client_id ? String(user.client_id) : null)
-    if (!effectiveClientId) {
-      alert('Client ID is required')
+    // Determine client_id: use explicit value, or user's client_id, or require input
+    let effectiveClientId: number | null = null
+    
+    if (clientId) {
+      // Explicitly entered client_id (for admins)
+      effectiveClientId = Number(clientId)
+    } else if (user?.client_id) {
+      // Use logged-in user's client_id
+      effectiveClientId = user.client_id
+    } else {
+      // No client_id available - admin must enter it
+      alert('Please enter a Client ID')
       return
     }
     
     try {
       await apiClient.post('/api/configs', { 
-        client_id: Number(effectiveClientId), 
+        client_id: effectiveClientId, 
         reddit_username: redditUsername || null,
         reddit_subreddits: subreddits.split(',').map(s => s.trim()).filter(s => s), 
         keywords: keywords.split(',').map(k => k.trim()).filter(k => k),
@@ -207,9 +215,26 @@ export default function Configs() {
       <div className="bg-white border rounded-xl p-4 shadow-sm mb-4">
         <h3 className="font-medium mb-3">{editingId ? 'Edit Configuration' : 'Add New Configuration'}</h3>
         <div className="grid gap-3">
+          {/* Show client_id field only for admins without a client_id */}
+          {!user?.client_id && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Client ID <span className="text-red-500">*</span>
+              </label>
+              <input 
+                className="w-full border rounded-md px-3 py-2" 
+                placeholder="Enter client ID" 
+                value={clientId} 
+                onChange={e => setClientId(e.target.value)}
+                type="number"
+              />
+              <p className="text-xs text-gray-500 mt-1">The client this configuration belongs to</p>
+            </div>
+          )}
+          
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Subreddits to Monitor
+              Subreddits to Monitor <span className="text-red-500">*</span>
             </label>
             <input 
               className="w-full border rounded-md px-3 py-2" 
@@ -222,7 +247,7 @@ export default function Configs() {
           
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Keywords to Track
+              Keywords to Track <span className="text-red-500">*</span>
             </label>
             <input 
               className="w-full border rounded-md px-3 py-2" 
@@ -276,7 +301,7 @@ export default function Configs() {
               <button 
                 className="px-4 py-2 rounded-md bg-black text-white hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed" 
                 onClick={create}
-                disabled={!subreddits || !keywords}
+                disabled={!subreddits || !keywords || (!user?.client_id && !clientId)}
               >
                 Create Configuration
               </button>
