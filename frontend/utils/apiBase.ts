@@ -61,9 +61,7 @@ export class APIClient {
   }
 
   private getAuthHeaders(): Record<string, string> {
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-    };
+    const headers: Record<string, string> = {};
 
     if (this.token) {
       headers['Authorization'] = `Bearer ${this.token}`;
@@ -198,8 +196,10 @@ export class APIClient {
     const config: RequestInit = {
       ...options,
       headers: {
-        ...options.headers,
+        // Set default Content-Type for JSON, but allow override
+        'Content-Type': 'application/json',
         ...authHeaders,
+        ...options.headers,  // options.headers comes LAST to override defaults
       },
     };
 
