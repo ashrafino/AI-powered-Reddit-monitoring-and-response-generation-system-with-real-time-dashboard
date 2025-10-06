@@ -47,11 +47,12 @@ app.add_middleware(
 )
 
 # CORS middleware with more restrictive settings for production
+# In production, requests come through nginx proxy so we allow all origins
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"] if settings.app_env == "development" else ["http://localhost:3000"],
+    allow_origins=["*"],  # Nginx handles the actual origin, backend sees nginx
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
 
