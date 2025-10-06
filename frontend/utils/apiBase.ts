@@ -102,7 +102,48 @@ export class APIClient {
       let errorData: APIError;
       
       if (isJson) {
-        errorData = await response.json();
+        const rawError = await response.json();
+        console.error('API Error Response:', rawError);
+        
+        // Handle FastAPI validation errors (422)
+        if (response.status === 422 && rawError.detail) {
+          const validationMessage = Array.isArray(rawError.detail) 
+            ? rawError.detail.map((e: any) => `${e.loc?.join('.')}: ${e.msg}`).join(', ')
+            : rawError.detail;
+          
+          errorData = {
+            error: {
+              code: 'VALIDATION_ERROR',
+              message: validationMessage,
+              details: rawError.detail,
+              timestamp: new Date().toISOString()
+            }
+          };
+        }
+        // Handle standard error format
+        else if (rawError.error) {
+          errorData = rawError;
+        }
+        // Handle FastAPI HTTPException format
+        else if (rawError.detail) {
+          errorData = {
+            error: {
+              code: 'HTTP_ERROR',
+              message: rawError.detail,
+              timestamp: new Date().toISOString()
+            }
+          };
+        }
+        // Fallback
+        else {
+          errorData = {
+            error: {
+              code: 'UNKNOWN_ERROR',
+              message: JSON.stringify(rawError),
+              timestamp: new Date().toISOString()
+            }
+          };
+        }
       } else {
         errorData = {
           error: {
