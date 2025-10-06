@@ -1,8 +1,15 @@
 // API base URL configuration
-// In development, this should point to the backend API
-// In production with Docker, this should be set via environment variables
+// Uses relative URLs in production (proxied by nginx)
+// In development, points directly to backend API
 
-export const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8001';
+import { getApiBaseUrl } from './runtimeConfig';
+
+// Re-export for convenience
+export { getApiBaseUrl };
+
+// Legacy export - kept for backward compatibility
+// Note: This is evaluated once at module load, prefer getApiBaseUrl() for runtime detection
+export const API_BASE = getApiBaseUrl();
 
 // Authentication error codes from backend
 export const AUTH_ERROR_CODES = {
@@ -39,8 +46,9 @@ export class APIClient {
   private baseURL: string;
   private onAuthError?: (error: APIError) => void;
 
-  constructor(baseURL: string = API_BASE, onAuthError?: (error: APIError) => void) {
-    this.baseURL = baseURL;
+  constructor(baseURL?: string, onAuthError?: (error: APIError) => void) {
+    // Always get fresh API base URL at runtime
+    this.baseURL = baseURL !== undefined ? baseURL : getApiBaseUrl();
     this.onAuthError = onAuthError;
   }
 
@@ -233,4 +241,5 @@ export class APIClientError extends Error {
 }
 
 // Create a default API client instance
+// This will use runtime-detected API base URL
 export const apiClient = new APIClient();

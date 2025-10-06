@@ -154,7 +154,8 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
     environment:
-      - NEXT_PUBLIC_API_BASE=${FRONTEND_API_BASE:-http://localhost}
+      # Empty value forces runtime detection of API base URL
+      # Frontend will use relative URLs that nginx proxies to backend
       - NODE_ENV=production
     depends_on:
       backend:
