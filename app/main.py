@@ -41,9 +41,11 @@ app = FastAPI(
 )
 
 # Security middleware
+# In production with nginx proxy, requests come from nginx (localhost)
+# So we allow localhost + any IP for direct access
 app.add_middleware(
     TrustedHostMiddleware,
-    allowed_hosts=["*"] if settings.app_env == "development" else ["localhost", "127.0.0.1"]
+    allowed_hosts=["*"]  # Nginx handles host validation, backend sees nginx as source
 )
 
 # CORS middleware with more restrictive settings for production
