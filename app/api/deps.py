@@ -172,10 +172,16 @@ def get_current_user_with_client(
     
     # Verify client_id matches if user has a client
     token_client_id = validation_result.payload.client_id
-    if user.client_id and token_client_id != user.client_id:
+    
+    # Debug logging
+    print(f"[AUTH DEBUG] User client_id: {user.client_id}, Token client_id: {token_client_id}")
+    
+    # For admin users (client_id = null), token should also have client_id = null
+    # For regular users, client_id must match exactly
+    if user.client_id is not None and token_client_id != user.client_id:
         AuthLogger.log_auth_failure(
             error_code=AuthErrorCodes.CLIENT_NOT_FOUND,
-            detail="Token client_id does not match user's client",
+            detail=f"Token client_id ({token_client_id}) does not match user's client ({user.client_id})",
             endpoint="get_current_user_with_client",
             user_email=user.email,
             user_id=user.id,
@@ -183,7 +189,23 @@ def get_current_user_with_client(
             **client_info
         )
         raise AuthenticationError(
-            detail="Invalid client information in token",
+            detail=f"Invalid client information in token. Expected: {user.client_id}, Got: {token_client_id}",
+            error_code=AuthErrorCodes.CLIENT_NOT_FOUND
+        )
+    
+    # For admin users, both should be null - this is OK
+    if user.client_id is None and token_client_id is not None:
+        AuthLogger.log_auth_failure(
+            error_code=AuthErrorCodes.CLIENT_NOT_FOUND,
+            detail=f"Admin user should have null client_id in token, got: {token_client_id}",
+            endpoint="get_current_user_with_client",
+            user_email=user.email,
+            user_id=user.id,
+            client_id=user.client_id,
+            **client_info
+        )
+        raise AuthenticationError(
+            detail=f"Admin user token should not have client_id. Got: {token_client_id}",
             error_code=AuthErrorCodes.CLIENT_NOT_FOUND
         )
     
@@ -285,17 +307,35 @@ async def websocket_auth_dependency(
     
     # Verify client_id matches if user has a client
     token_client_id = validation_result.payload.client_id
-    if user.client_id and token_client_id != user.client_id:
+    
+    # For admin users (client_id = null), token should also have client_id = null
+    # For regular users, client_id must match exactly
+    if user.client_id is not None and token_client_id != user.client_id:
         AuthLogger.log_auth_failure(
             error_code=AuthErrorCodes.CLIENT_NOT_FOUND,
-            detail="Token client_id does not match user's client",
+            detail=f"Token client_id ({token_client_id}) does not match user's client ({user.client_id})",
             endpoint="websocket_auth",
             user_email=user.email,
             user_id=user.id,
             client_id=user.client_id
         )
         raise AuthenticationError(
-            detail="Invalid client information in token",
+            detail=f"Invalid client information in token. Expected: {user.client_id}, Got: {token_client_id}",
+            error_code=AuthErrorCodes.CLIENT_NOT_FOUND
+        )
+    
+    # For admin users, both should be null - this is OK
+    if user.client_id is None and token_client_id is not None:
+        AuthLogger.log_auth_failure(
+            error_code=AuthErrorCodes.CLIENT_NOT_FOUND,
+            detail=f"Admin user should have null client_id in token, got: {token_client_id}",
+            endpoint="websocket_auth",
+            user_email=user.email,
+            user_id=user.id,
+            client_id=user.client_id
+        )
+        raise AuthenticationError(
+            detail=f"Admin user token should not have client_id. Got: {token_client_id}",
             error_code=AuthErrorCodes.CLIENT_NOT_FOUND
         )
     
