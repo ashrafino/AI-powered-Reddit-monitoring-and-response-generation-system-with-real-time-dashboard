@@ -55,15 +55,20 @@ def login(
     # Extract client info for audit logging
     client_info = extract_client_info(request)
     
+    # Debug logging to see what we received
+    print(f"[LOGIN DEBUG] Received username: '{form_data.username}', password length: {len(form_data.password) if form_data.password else 0}")
+    print(f"[LOGIN DEBUG] Client info: {client_info}")
+    
     # Validate input
     if not form_data.username or not form_data.password:
+        error_detail = f"Email and password are required (received username: '{form_data.username}', password: {'present' if form_data.password else 'missing'})"
         AuthLogger.log_auth_failure(
             error_code="INVALID_INPUT",
-            detail="Email and password are required",
+            detail=error_detail,
             endpoint="login",
             **client_info
         )
-        raise HTTPException(status_code=400, detail="Email and password are required")
+        raise HTTPException(status_code=400, detail=error_detail)
 
     # Find user
     user = db.query(User).filter(User.email == form_data.username).first()
