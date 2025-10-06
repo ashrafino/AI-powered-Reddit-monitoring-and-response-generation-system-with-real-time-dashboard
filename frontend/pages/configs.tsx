@@ -20,7 +20,7 @@ const fetcher = async (url: string) => {
 }
 
 export default function Configs() {
-  const { isAuthenticated, isLoading: authLoading, error: authError } = useAuth()
+  const { isAuthenticated, isLoading: authLoading, error: authError, user } = useAuth()
   const [clientId, setClientId] = useState('')
   const [subreddits, setSubs] = useState('')
   const [keywords, setKeywords] = useState('')
@@ -28,6 +28,13 @@ export default function Configs() {
   const [isActive, setIsActive] = useState(true)
   const [editingId, setEditingId] = useState<number | null>(null)
   const router = useRouter()
+
+  // Auto-fill client_id from logged-in user
+  useEffect(() => {
+    if (user && user.client_id && !clientId) {
+      setClientId(String(user.client_id))
+    }
+  }, [user, clientId])
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -47,27 +54,37 @@ export default function Configs() {
   )
 
   const create = async () => {
-    if (!clientId || !subreddits || !keywords) {
-      alert('Please fill in all fields')
+    if (!subreddits || !keywords) {
+      alert('Please add at least one subreddit and one keyword')
+      return
+    }
+    
+    // Use user's client_id if not explicitly set
+    const effectiveClientId = clientId || (user?.client_id ? String(user.client_id) : null)
+    if (!effectiveClientId) {
+      alert('Client ID is required')
       return
     }
     
     try {
       await apiClient.post('/api/configs', { 
-        client_id: Number(clientId), 
+        client_id: Number(effectiveClientId), 
         reddit_username: redditUsername || null,
         reddit_subreddits: subreddits.split(',').map(s => s.trim()).filter(s => s), 
         keywords: keywords.split(',').map(k => k.trim()).filter(k => k),
         is_active: isActive
       })
       
-      setClientId('')
+      // Don't clear client_id if it's from the user
+      if (!user?.client_id) {
+        setClientId('')
+      }
       setSubs('')
       setKeywords('')
       setRedditUsername('')
       setIsActive(true)
       mutate()
-      alert('Configuration created successfully')
+      alert('Configuration created successfully!')
     } catch (error) {
       console.error('Create config error:', error)
       if (error instanceof APIClientError) {
@@ -80,7 +97,7 @@ export default function Configs() {
 
   const startEdit = (cfg: any) => {
     setEditingId(cfg.id)
-    setClientId(String(cfg.client_id))
+    // Don't set client_id for editing - it's not editable
     setRedditUsername(cfg.reddit_username || '')
     setSubs(Array.isArray(cfg.reddit_subreddits) ? cfg.reddit_subreddits.join(',') : '')
     setKeywords(Array.isArray(cfg.keywords) ? cfg.keywords.join(',') : '')
@@ -90,32 +107,40 @@ export default function Configs() {
 
   const saveEdit = async () => {
     if (!editingId) return
+    
+    if (!subreddits || !keywords) {
+      alert('Please add at least one subreddit and one keyword')
+      return
+    }
+    
     try {
       await apiClient.put(`/api/configs/${editingId}`, {
-        client_id: clientId ? Number(clientId) : undefined,
+        // Don't send client_id - it shouldn't change
         reddit_username: redditUsername || null,
-        reddit_subreddits: subreddits ? subreddits.split(',').map(s => s.trim()).filter(Boolean) : undefined,
-        keywords: keywords ? keywords.split(',').map(k => k.trim()).filter(Boolean) : undefined,
+        reddit_subreddits: subreddits.split(',').map(s => s.trim()).filter(Boolean),
+        keywords: keywords.split(',').map(k => k.trim()).filter(Boolean),
         is_active: isActive
       })
       
       setEditingId(null)
-      setClientId('')
       setRedditUsername('')
       setSubs('')
       setKeywords('')
       setIsActive(true)
       mutate()
-      alert('Configuration updated')
+      alert('Configuration updated successfully!')
     } catch (err) {
       console.error('Update config error:', err)
-      alert('Error updating configuration')
+      if (err instanceof APIClientError) {
+        alert(`Failed to update configuration: ${err.message}`)
+      } else {
+        alert('Error updating configuration')
+      }
     }
   }
 
   const cancelEdit = () => {
     setEditingId(null)
-    setClientId('')
     setRedditUsername('')
     setSubs('')
     setKeywords('')
@@ -179,60 +204,85 @@ export default function Configs() {
         </div>
       )}
       
-      <div className="bg-white border rounded-xl p-4 shadow-sm mb-4 grid gap-2 md:grid-cols-6">
-        <input 
-          className="border rounded-md px-3 py-2" 
-          placeholder="client_id" 
-          value={clientId} 
-          onChange={e => setClientId(e.target.value)}
-          type="number"
-        />
-        <input 
-          className="border rounded-md px-3 py-2" 
-          placeholder="reddit_username (optional)" 
-          value={redditUsername} 
-          onChange={e => setRedditUsername(e.target.value)}
-        />
-        <input 
-          className="border rounded-md px-3 py-2" 
-          placeholder="subreddits (csv)" 
-          value={subreddits} 
-          onChange={e => setSubs(e.target.value)}
-        />
-        <input 
-          className="border rounded-md px-3 py-2" 
-          placeholder="keywords (csv)" 
-          value={keywords} 
-          onChange={e => setKeywords(e.target.value)}
-        />
-        <label className="inline-flex items-center gap-2 text-sm px-2">
-          <input type="checkbox" checked={isActive} onChange={e => setIsActive(e.target.checked)} />
-          Active
-        </label>
-        {editingId ? (
-          <div className="flex gap-2">
-            <button 
-              className="px-3 py-2 rounded-md bg-black text-white hover:bg-gray-800" 
-              onClick={saveEdit}
-            >
-              Save
-            </button>
-            <button 
-              className="px-3 py-2 rounded-md border hover:bg-gray-50" 
-              onClick={cancelEdit}
-            >
-              Cancel
-            </button>
+      <div className="bg-white border rounded-xl p-4 shadow-sm mb-4">
+        <h3 className="font-medium mb-3">{editingId ? 'Edit Configuration' : 'Add New Configuration'}</h3>
+        <div className="grid gap-3">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Subreddits to Monitor
+            </label>
+            <input 
+              className="w-full border rounded-md px-3 py-2" 
+              placeholder="e.g., technology, programming, webdev" 
+              value={subreddits} 
+              onChange={e => setSubs(e.target.value)}
+            />
+            <p className="text-xs text-gray-500 mt-1">Separate multiple subreddits with commas</p>
           </div>
-        ) : (
-          <button 
-            className="px-3 py-2 rounded-md bg-black text-white hover:bg-gray-800" 
-            onClick={create}
-            disabled={!clientId || !subreddits || !keywords}
-          >
-            Create
-          </button>
-        )}
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Keywords to Track
+            </label>
+            <input 
+              className="w-full border rounded-md px-3 py-2" 
+              placeholder="e.g., API, integration, automation" 
+              value={keywords} 
+              onChange={e => setKeywords(e.target.value)}
+            />
+            <p className="text-xs text-gray-500 mt-1">Separate multiple keywords with commas</p>
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Reddit Username (Optional)
+            </label>
+            <input 
+              className="w-full border rounded-md px-3 py-2" 
+              placeholder="Leave empty to monitor all posts" 
+              value={redditUsername} 
+              onChange={e => setRedditUsername(e.target.value)}
+            />
+            <p className="text-xs text-gray-500 mt-1">Filter posts by specific Reddit user</p>
+          </div>
+          
+          <div className="flex items-center justify-between">
+            <label className="inline-flex items-center gap-2">
+              <input 
+                type="checkbox" 
+                checked={isActive} 
+                onChange={e => setIsActive(e.target.checked)}
+                className="rounded"
+              />
+              <span className="text-sm font-medium">Active</span>
+            </label>
+            
+            {editingId ? (
+              <div className="flex gap-2">
+                <button 
+                  className="px-4 py-2 rounded-md bg-black text-white hover:bg-gray-800" 
+                  onClick={saveEdit}
+                >
+                  Save Changes
+                </button>
+                <button 
+                  className="px-4 py-2 rounded-md border hover:bg-gray-50" 
+                  onClick={cancelEdit}
+                >
+                  Cancel
+                </button>
+              </div>
+            ) : (
+              <button 
+                className="px-4 py-2 rounded-md bg-black text-white hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed" 
+                onClick={create}
+                disabled={!subreddits || !keywords}
+              >
+                Create Configuration
+              </button>
+            )}
+          </div>
+        </div>
       </div>
       
       <div className="bg-white border rounded-xl p-4 shadow-sm">
