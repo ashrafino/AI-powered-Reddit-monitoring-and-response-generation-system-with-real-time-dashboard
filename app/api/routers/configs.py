@@ -40,6 +40,10 @@ def create_config(payload: ClientConfigCreate, db: Session = Depends(get_db), us
             reddit_subreddits=list_to_csv(payload.reddit_subreddits),
             keywords=list_to_csv(payload.keywords),
             is_active=payload.is_active,
+            scan_interval_minutes=payload.scan_interval_minutes or 5,
+            scan_start_hour=payload.scan_start_hour or 0,
+            scan_end_hour=payload.scan_end_hour or 23,
+            scan_days=payload.scan_days or "1,2,3,4,5,6,7",
         )
         db.add(config)
         db.commit()
@@ -96,6 +100,14 @@ def update_config(config_id: int, payload: ClientConfigUpdate, db: Session = Dep
         config.keywords = list_to_csv(payload.keywords)
     if payload.is_active is not None:
         config.is_active = payload.is_active
+    if payload.scan_interval_minutes is not None:
+        config.scan_interval_minutes = payload.scan_interval_minutes
+    if payload.scan_start_hour is not None:
+        config.scan_start_hour = payload.scan_start_hour
+    if payload.scan_end_hour is not None:
+        config.scan_end_hour = payload.scan_end_hour
+    if payload.scan_days is not None:
+        config.scan_days = payload.scan_days
 
     db.add(config)
     db.commit()

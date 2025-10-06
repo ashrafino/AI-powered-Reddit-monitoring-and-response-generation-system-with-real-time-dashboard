@@ -27,6 +27,13 @@ export default function Configs() {
   const [redditUsername, setRedditUsername] = useState('')
   const [isActive, setIsActive] = useState(true)
   const [editingId, setEditingId] = useState<number | null>(null)
+  
+  // Scheduling state
+  const [scanInterval, setScanInterval] = useState(5)
+  const [scanStartHour, setScanStartHour] = useState(0)
+  const [scanEndHour, setScanEndHour] = useState(23)
+  const [scanDays, setScanDays] = useState([1, 2, 3, 4, 5, 6, 7])
+  
   const router = useRouter()
 
   // Auto-fill client_id from logged-in user
@@ -35,6 +42,14 @@ export default function Configs() {
       setClientId(String(user.client_id))
     }
   }, [user, clientId])
+
+  const toggleScanDay = (day: number) => {
+    setScanDays(prev => 
+      prev.includes(day) 
+        ? prev.filter(d => d !== day)
+        : [...prev, day].sort()
+    )
+  }
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -90,7 +105,11 @@ export default function Configs() {
         reddit_username: redditUsername || null,
         reddit_subreddits: subreddits.split(',').map(s => s.trim()).filter(s => s), 
         keywords: keywords.split(',').map(k => k.trim()).filter(k => k),
-        is_active: isActive
+        is_active: isActive,
+        scan_interval_minutes: scanInterval,
+        scan_start_hour: scanStartHour,
+        scan_end_hour: scanEndHour,
+        scan_days: scanDays.join(',')
       })
       
       // Don't clear client_id if it's from the user
@@ -301,6 +320,83 @@ export default function Configs() {
             <p className="text-xs text-gray-500 mt-1">Filter posts by specific Reddit user</p>
           </div>
           
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Scan Interval (minutes)
+              </label>
+              <select 
+                className="w-full border rounded-md px-3 py-2" 
+                value={scanInterval} 
+                onChange={e => setScanInterval(Number(e.target.value))}
+              >
+                <option value={5}>Every 5 minutes</option>
+                <option value={15}>Every 15 minutes</option>
+                <option value={30}>Every 30 minutes</option>
+                <option value={60}>Every hour</option>
+                <option value={180}>Every 3 hours</option>
+                <option value={360}>Every 6 hours</option>
+                <option value={720}>Every 12 hours</option>
+                <option value={1440}>Daily</option>
+              </select>
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Active Hours
+              </label>
+              <div className="flex gap-2">
+                <select 
+                  className="flex-1 border rounded-md px-2 py-2 text-sm" 
+                  value={scanStartHour} 
+                  onChange={e => setScanStartHour(Number(e.target.value))}
+                >
+                  {Array.from({length: 24}, (_, i) => (
+                    <option key={i} value={i}>{i.toString().padStart(2, '0')}:00</option>
+                  ))}
+                </select>
+                <span className="self-center text-sm text-gray-500">to</span>
+                <select 
+                  className="flex-1 border rounded-md px-2 py-2 text-sm" 
+                  value={scanEndHour} 
+                  onChange={e => setScanEndHour(Number(e.target.value))}
+                >
+                  {Array.from({length: 24}, (_, i) => (
+                    <option key={i} value={i}>{i.toString().padStart(2, '0')}:00</option>
+                  ))}
+                </select>
+              </div>
+              <p className="text-xs text-gray-500 mt-1">Only scan during these hours</p>
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Active Days
+              </label>
+              <div className="flex flex-wrap gap-1">
+                {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day, index) => {
+                  const dayNum = index + 1;
+                  const isSelected = scanDays.includes(dayNum.toString());
+                  return (
+                    <button
+                      key={day}
+                      type="button"
+                      onClick={() => toggleScanDay(dayNum)}
+                      className={`px-2 py-1 text-xs rounded ${
+                        isSelected 
+                          ? 'bg-black text-white' 
+                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                      }`}
+                    >
+                      {day}
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="text-xs text-gray-500 mt-1">Select active days</p>
+            </div>
+          </div>
+          
           <div className="flex items-center justify-between">
             <label className="inline-flex items-center gap-2">
               <input 
@@ -309,7 +405,7 @@ export default function Configs() {
                 onChange={e => setIsActive(e.target.checked)}
                 className="rounded"
               />
-              <span className="text-sm font-medium">Active</span>
+              <span className="text-sm font-medium">Configuration Active</span>
             </label>
             
             {editingId ? (
