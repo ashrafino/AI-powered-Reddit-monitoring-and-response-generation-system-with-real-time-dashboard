@@ -2,7 +2,7 @@ import useSWR from 'swr'
 import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/router'
 import Layout from '../components/Layout'
-import AnalyticsDashboard from '../components/AnalyticsDashboard'
+
 import ResponseManager from '../components/ResponseManager'
 import SearchAndFilter from '../components/SearchAndFilter'
 import MobileResponsiveLayout from '../components/MobileResponsiveLayout'
@@ -183,25 +183,32 @@ function DashboardContent() {
     mutatePosts()
   }
 
-  const { data: trends, error: trendsError } = useSWR(
-    token ? `${API_BASE}/api/analytics/trends` : null, 
-    fetcher,
-    { 
-      revalidateOnFocus: false,
-      revalidateOnReconnect: true,
-      errorRetryCount: 3
+  const generateResponse = async (postId: number) => {
+    try {
+      const result = await apiClient.post(`/api/posts/${postId}/generate-response`) as any
+      
+      if (result?.status === 'generated') {
+        alert(`✓ Response generated!\n\nScore: ${result.response.score}\nGrade: ${result.response.grade}`)
+        // Refresh posts to show new response
+        mutatePosts()
+      } else if (result?.status === 'exists') {
+        alert('ℹ️ Response already exists for this post')
+      } else if (result?.status === 'failed') {
+        alert(`⚠️ Failed to generate response:\n${result.message}`)
+      } else if (result?.status === 'error') {
+        alert(`❌ Error generating response:\n${result.message}`)
+      }
+    } catch (error) {
+      console.error('Generate response error:', error)
+      if (error instanceof APIClientError) {
+        alert(`Failed to generate response: ${error.message}`)
+      } else {
+        alert('Error generating response. Check console for details.')
+      }
     }
-  )
+  }
 
-  const { data: keywordInsights, error: keywordError } = useSWR(
-    token ? `${API_BASE}/api/analytics/keywords` : null, 
-    fetcher,
-    { 
-      revalidateOnFocus: false,
-      revalidateOnReconnect: true,
-      errorRetryCount: 3
-    }
-  )
+
   const scan = async () => {
     try {
       const result = await apiClient.post('/api/ops/scan') as any
@@ -291,70 +298,18 @@ function DashboardContent() {
         />
       )}
       
-      <div className="grid gap-4 grid-cols-1 md:grid-cols-4">
+      <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
         <div className="bg-white border rounded-xl p-4 shadow-sm">
-          <div className="text-sm text-gray-500">Posts</div>
+          <div className="text-sm text-gray-500">Total Posts Found</div>
           <div className="text-2xl font-semibold">{(summary as any)?.posts ?? '—'}</div>
         </div>
         <div className="bg-white border rounded-xl p-4 shadow-sm">
-          <div className="text-sm text-gray-500">Responses</div>
+          <div className="text-sm text-gray-500">AI Responses Generated</div>
           <div className="text-2xl font-semibold">{(summary as any)?.responses ?? '—'}</div>
         </div>
-        <div className="bg-white border rounded-xl p-4 shadow-sm">
-          <div className="text-sm text-gray-500">Copy Rate</div>
-          <div className="text-2xl font-semibold">{(summary as any)?.copy_rate ?? '—'}%</div>
-        </div>
-        <div className="bg-white border rounded-xl p-4 shadow-sm">
-          <div className="text-sm text-gray-500">Growth</div>
-          <div className="text-2xl font-semibold">
-            {(trends as any)?.growth_rate ? (
-              <span className={(trends as any).growth_rate >= 0 ? 'text-green-600' : 'text-red-600'}>
-                {(trends as any).growth_rate > 0 ? '+' : ''}{(trends as any).growth_rate}%
-              </span>
-            ) : '—'}
-          </div>
-        </div>
       </div>
 
-      {/* Analytics Charts */}
-      <div className="mt-8 mb-8">
-        <div className="mb-4">
-          <h2 className="text-lg font-semibold">Analytics Overview</h2>
-        </div>
-        
-        <AnalyticsDashboard token={token!} />
-      </div>
 
-      {/* Keyword Insights */}
-      {(keywordInsights as any) && (keywordInsights as any).length > 0 && (
-        <div className="mt-8 mb-8">
-          <h2 className="text-lg font-semibold mb-4">Keyword Performance</h2>
-          <div className="bg-white border rounded-xl p-6 shadow-sm">
-            <div className="space-y-4">
-              {(keywordInsights as any).slice(0, 5).map((insight: any, index: number) => (
-                <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                  <div>
-                    <span className="font-medium">{insight.keyword}</span>
-                    <div className="text-sm text-gray-600">
-                      {insight.matches} matches • {insight.avg_engagement} avg engagement
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <div className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                      insight.category === 'high_performer' ? 'bg-green-100 text-green-800' :
-                      insight.category === 'moderate_performer' ? 'bg-yellow-100 text-yellow-800' :
-                      'bg-red-100 text-red-800'
-                    }`}>
-                      {insight.category.replace('_', ' ')}
-                    </div>
-                    <div className="text-xs text-gray-500 mt-1">{insight.response_rate}% response rate</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Search and Filter */}
       <div className="mt-8 mb-6">
@@ -441,7 +396,17 @@ function DashboardContent() {
                   Keywords: {p.keywords_matched || 'None'}
                 </div>
                 <div className="mt-3">
-                  <div className="text-sm font-medium mb-1">AI Responses</div>
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="text-sm font-medium">AI Responses</div>
+                    {(!Array.isArray(p.responses) || p.responses.length === 0) && (
+                      <button
+                        onClick={() => generateResponse(p.id)}
+                        className="px-3 py-1 text-xs bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                      >
+                        Generate Response
+                      </button>
+                    )}
+                  </div>
                   {Array.isArray(p.responses) && p.responses.length > 0 ? (
                     <ResponseManager 
                       responses={p.responses}

@@ -9,10 +9,10 @@ celery_app = Celery(
 
 celery_app.conf.timezone = "UTC"
 celery_app.conf.beat_schedule = {
-    # Reddit scanning every 5 minutes
-    "scan-reddit-every-5-min": {
-        "task": "app.tasks.reddit_tasks.scan_reddit",
-        "schedule": 300.0,
+    # Dynamic Reddit scanning based on config intervals
+    "scan-reddit-dynamic": {
+        "task": "app.tasks.reddit_tasks.scan_reddit_dynamic",
+        "schedule": 60.0,  # Check every minute for configs that need scanning
     },
     # Update performance metrics daily at 1 AM
     "update-performance-metrics-daily": {
