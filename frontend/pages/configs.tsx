@@ -250,7 +250,7 @@ export default function Configs() {
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Client <span className="text-red-500">*</span>
               </label>
-              {clients && clients.length > 0 ? (
+              {clients && Array.isArray(clients) && clients.length > 0 ? (
                 <select 
                   className="w-full border rounded-md px-3 py-2" 
                   value={clientId} 

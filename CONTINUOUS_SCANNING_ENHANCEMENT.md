@@ -195,4 +195,3 @@ sudo docker-compose -f docker-compose.prod.yml restart worker
 - ✅ **Real-time feedback** (scores, grades, immediate results)
 
 **The system will continuously monitor Reddit based on your config settings and let you generate AI responses whenever you want!** 🚀
-x

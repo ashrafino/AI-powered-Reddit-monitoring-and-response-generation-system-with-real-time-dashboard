@@ -49,9 +49,9 @@ def fix_admin_user():
         
         print(f"🔑 New token generated (first 50 chars): {new_token[:50]}...")
         
-        # Decode token to verify
-        import jwt
-        payload = jwt.decode(new_token, options={'verify_signature': False})
+        # Decode token to verify (using jose which is already installed)
+        from jose import jwt
+        payload = jwt.get_unverified_claims(new_token)
         print(f"📋 Token payload:")
         print(f"   sub: {payload.get('sub')}")
         print(f"   user_id: {payload.get('user_id')}")
