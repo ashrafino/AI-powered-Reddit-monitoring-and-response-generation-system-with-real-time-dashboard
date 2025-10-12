@@ -2,7 +2,7 @@ from pydantic import BaseModel
 from typing import List, Optional
 from datetime import datetime
 
-class AIResponseOut(BaseModel):
+class ResponseOut(BaseModel):
     id: int
     post_id: int
     client_id: int
@@ -15,7 +15,7 @@ class AIResponseOut(BaseModel):
     class Config:
         from_attributes = True
 
-class MatchedPostOut(BaseModel):
+class PostOut(BaseModel):
     id: int
     client_id: int
     subreddit: str
@@ -30,7 +30,7 @@ class MatchedPostOut(BaseModel):
     flagged: bool
     reviewed: bool
     created_at: datetime
-    responses: List[AIResponseOut] = []
+    responses: List[ResponseOut] = []
 
     class Config:
         from_attributes = True
