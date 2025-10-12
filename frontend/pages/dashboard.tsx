@@ -67,6 +67,15 @@ function DashboardContent() {
     }
   )
 
+  const { data: configs } = useSWR(
+    isAuthenticated ? '/api/configs' : null,
+    fetcher,
+    {
+      revalidateOnFocus: false,
+      errorRetryCount: 3
+    }
+  )
+
   // Extract available subreddits from posts
   useEffect(() => {
     if (posts && Array.isArray(posts)) {
