@@ -1,5 +1,6 @@
 from pydantic import BaseModel
 from typing import List, Optional
+from datetime import datetime
 
 class AIResponseOut(BaseModel):
     id: int
@@ -9,6 +10,7 @@ class AIResponseOut(BaseModel):
     score: int
     copied: bool
     compliance_ack: bool
+    created_at: datetime
 
     class Config:
         from_attributes = True
@@ -27,6 +29,7 @@ class MatchedPostOut(BaseModel):
     num_comments: Optional[int] = 0
     flagged: bool
     reviewed: bool
+    created_at: datetime
     responses: List[AIResponseOut] = []
 
     class Config:
