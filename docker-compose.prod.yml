@@ -110,8 +110,8 @@ services:
         echo 'Waiting for backend...' &&
         until curl -f http://backend:8001/api/health; do sleep 5; done &&
         echo 'Starting Celery beat...' &&
-        rm -f celerybeat-schedule* &&
-        celery -A app.celery_app.celery_app beat --loglevel=INFO
+        rm -f celerybeat-schedule* 2>/dev/null || true &&
+        celery -A app.celery_app.celery_app beat --loglevel=INFO --schedule=/tmp/celerybeat-schedule
       "
     depends_on:
       redis:
