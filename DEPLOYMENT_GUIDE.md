@@ -13,14 +13,16 @@ Complete guide to deploy your Reddit Bot System to DigitalOcean with production-
 ## 🏗️ Step 1: Create DigitalOcean Droplet
 
 ### Recommended Specifications
+
 - **Size**: 2 GB RAM / 1 vCPU / 50 GB SSD ($12/month)
 - **OS**: Ubuntu 22.04 LTS
 - **Region**: Choose closest to your users
-- **Additional Options**: 
+- **Additional Options**:
   - Enable monitoring
   - Add SSH key for secure access
 
 ### Create Droplet
+
 1. Log into DigitalOcean
 2. Click "Create" → "Droplets"
 3. Choose Ubuntu 22.04 LTS
@@ -31,11 +33,13 @@ Complete guide to deploy your Reddit Bot System to DigitalOcean with production-
 ## 🔧 Step 2: Initial Server Setup
 
 ### Connect to Your Server
+
 ```bash
 ssh root@your-server-ip
 ```
 
 ### Create Non-Root User
+
 ```bash
 adduser deploy
 usermod -aG sudo deploy
@@ -43,6 +47,7 @@ su - deploy
 ```
 
 ### Run Setup Script
+
 ```bash
 # Download and run the setup script
 curl -fsSL https://raw.githubusercontent.com/your-repo/reddit-bot-system/main/deploy/digitalocean-setup.sh -o setup.sh
@@ -51,6 +56,7 @@ chmod +x setup.sh
 ```
 
 This script will:
+
 - Install Docker and Docker Compose
 - Configure firewall and security
 - Set up monitoring and backups
@@ -60,12 +66,14 @@ This script will:
 ## 📁 Step 3: Deploy Your Application
 
 ### Clone Repository
+
 ```bash
 cd /opt/reddit-bot
 git clone https://github.com/your-username/reddit-bot-system.git .
 ```
 
 ### Configure Environment
+
 ```bash
 # Copy and edit production environment file
 cp .env.prod.example .env.prod
@@ -73,6 +81,7 @@ nano .env.prod
 ```
 
 **Required Environment Variables:**
+
 ```bash
 # Domain
 DOMAIN_NAME=your-domain.com
@@ -102,12 +111,14 @@ OPENAI_API_KEY=your_openai_api_key
 ## 🌐 Step 4: Configure Domain and DNS
 
 ### Point Domain to Server
+
 1. Go to your domain registrar
 2. Add A records:
    - `@` → `your-server-ip`
    - `www` → `your-server-ip`
 
 ### Wait for DNS Propagation
+
 ```bash
 # Check DNS propagation
 dig your-domain.com
@@ -117,11 +128,13 @@ nslookup your-domain.com
 ## 🔒 Step 5: Set Up SSL Certificate
 
 ### Run SSL Setup Script
+
 ```bash
 sudo ./deploy/ssl-setup.sh your-domain.com admin@your-domain.com
 ```
 
 This will:
+
 - Install Let's Encrypt certificate
 - Configure nginx for HTTPS
 - Set up automatic renewal
@@ -129,6 +142,7 @@ This will:
 ## 🚀 Step 6: Deploy Application
 
 ### Build and Start Services
+
 ```bash
 # Make deploy script executable
 chmod +x deploy.sh
@@ -138,6 +152,7 @@ chmod +x deploy.sh
 ```
 
 ### Verify Deployment
+
 ```bash
 # Check service status
 sudo systemctl status reddit-bot
@@ -152,6 +167,7 @@ docker ps
 ## 🔍 Step 7: Verify Everything Works
 
 ### Test Endpoints
+
 ```bash
 # Health check
 curl https://your-domain.com/health
@@ -164,6 +180,7 @@ curl -I https://your-domain.com
 ```
 
 ### Access Your Application
+
 - **Frontend**: https://your-domain.com
 - **API**: https://your-domain.com/api
 - **Admin Login**: Use credentials from .env.prod
@@ -171,6 +188,7 @@ curl -I https://your-domain.com
 ## 📊 Step 8: Monitoring and Maintenance
 
 ### View Logs
+
 ```bash
 # Application logs
 docker-compose -f docker-compose.prod.yml logs -f backend
@@ -183,6 +201,7 @@ sudo journalctl -u reddit-bot -f
 ```
 
 ### Monitor Resources
+
 ```bash
 # System resources
 htop
@@ -195,6 +214,7 @@ df -h
 ```
 
 ### Backup Management
+
 ```bash
 # Manual backup
 ./backup.sh
@@ -209,6 +229,7 @@ ls -la backups/
 ## 🔄 Step 9: Updates and Maintenance
 
 ### Deploy Updates
+
 ```bash
 cd /opt/reddit-bot
 git pull origin main
@@ -216,6 +237,7 @@ git pull origin main
 ```
 
 ### Scale Services (if needed)
+
 ```bash
 # Scale backend workers
 docker-compose -f docker-compose.prod.yml up -d --scale worker=3
@@ -229,6 +251,7 @@ docker-compose -f docker-compose.prod.yml up -d --scale frontend=2
 ### Common Issues
 
 #### Services Won't Start
+
 ```bash
 # Check logs
 docker-compose -f docker-compose.prod.yml logs
@@ -241,6 +264,7 @@ docker-compose -f docker-compose.prod.yml build --no-cache
 ```
 
 #### SSL Certificate Issues
+
 ```bash
 # Check certificate status
 sudo certbot certificates
@@ -253,6 +277,7 @@ sudo nginx -t
 ```
 
 #### Database Connection Issues
+
 ```bash
 # Check database logs
 docker-compose -f docker-compose.prod.yml logs postgres
@@ -262,6 +287,7 @@ docker-compose -f docker-compose.prod.yml exec postgres psql -U postgres -d redd
 ```
 
 #### High Memory Usage
+
 ```bash
 # Check memory usage
 free -h
@@ -276,6 +302,7 @@ docker system prune -f
 ### Performance Optimization
 
 #### Enable Swap (if needed)
+
 ```bash
 sudo fallocate -l 2G /swapfile
 sudo chmod 600 /swapfile
@@ -285,6 +312,7 @@ echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
 ```
 
 #### Optimize Docker
+
 ```bash
 # Clean up regularly
 docker system prune -f --volumes
@@ -296,11 +324,13 @@ docker system prune -f --volumes
 ## 📈 Scaling Considerations
 
 ### Vertical Scaling (Upgrade Droplet)
+
 1. Power off droplet
 2. Resize in DigitalOcean panel
 3. Power on and verify
 
 ### Horizontal Scaling (Multiple Servers)
+
 - Use DigitalOcean Load Balancer
 - Separate database to managed PostgreSQL
 - Use Redis cluster
@@ -309,6 +339,7 @@ docker system prune -f --volumes
 ## 🔐 Security Best Practices
 
 ### Regular Updates
+
 ```bash
 # Update system packages
 sudo apt update && sudo apt upgrade -y
@@ -319,6 +350,7 @@ docker-compose -f docker-compose.prod.yml pull
 ```
 
 ### Monitor Security
+
 ```bash
 # Check fail2ban status
 sudo fail2ban-client status
@@ -333,6 +365,7 @@ sudo tail -f /var/log/auth.log
 ## 📞 Support
 
 ### Useful Commands
+
 ```bash
 # Service management
 sudo systemctl status reddit-bot
@@ -349,6 +382,7 @@ docker-compose -f docker-compose.prod.yml down
 ```
 
 ### Getting Help
+
 - Check logs first: `docker-compose logs`
 - Review this guide
 - Check DigitalOcean documentation
@@ -361,6 +395,7 @@ docker-compose -f docker-compose.prod.yml down
 Your Reddit Bot System is now deployed and running in production on DigitalOcean!
 
 **What's Next?**
+
 - Set up monitoring alerts
 - Configure additional Reddit accounts
 - Customize AI response templates
@@ -368,6 +403,7 @@ Your Reddit Bot System is now deployed and running in production on DigitalOcean
 - Consider CDN for better performance
 
 **Remember:**
+
 - Monitor your usage and costs
 - Keep your API keys secure
 - Regular backups are automated
