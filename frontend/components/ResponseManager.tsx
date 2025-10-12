@@ -41,6 +41,7 @@ const ResponseManager: React.FC<ResponseManagerProps> = ({
   const [showHistory, setShowHistory] = useState<number | null>(null)
   const [copyStatus, setCopyStatus] = useState<{ [key: number]: string }>({})
   const [loadingStates, setLoadingStates] = useState<{ [key: number]: boolean }>({})
+  const [expandedResponses, setExpandedResponses] = useState<{ [key: number]: boolean }>({})
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   // Auto-resize textarea
@@ -196,6 +197,13 @@ const ResponseManager: React.FC<ResponseManagerProps> = ({
     return 'text-red-600'
   }
 
+  const toggleResponse = (responseId: number) => {
+    setExpandedResponses(prev => ({
+      ...prev,
+      [responseId]: !prev[responseId]
+    }))
+  }
+
   if (!responses || responses.length === 0) {
     return (
       <div className="text-center py-8">
@@ -206,48 +214,60 @@ const ResponseManager: React.FC<ResponseManagerProps> = ({
 
   return (
     <div className="space-y-3">
-      {responses.map((response) => (
-        <div key={response.id} className="border rounded-lg bg-white shadow-sm">
-          {/* Response Header */}
-          <div className="p-4 border-b bg-gray-50 rounded-t-lg">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-3">
-                <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getScoreColor(response.score)}`}>
-                  Score: {response.score || 0}
-                </span>
-                {response.grade && (
-                  <span className={`text-sm font-semibold ${getGradeColor(response.grade)}`}>
-                    Grade: {response.grade}
+      {responses.map((response) => {
+        const isExpanded = expandedResponses[response.id] || false
+        
+        return (
+          <div key={response.id} className="border rounded-lg bg-white shadow-sm">
+            {/* Response Header - Always Visible */}
+            <div 
+              className="p-4 bg-gray-50 rounded-t-lg cursor-pointer hover:bg-gray-100 transition-colors"
+              onClick={() => toggleResponse(response.id)}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <button className="text-gray-500 hover:text-gray-700">
+                    {isExpanded ? (
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    ) : (
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    )}
+                  </button>
+                  <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getScoreColor(response.score)}`}>
+                    Score: {response.score || 0}
                   </span>
-                )}
-                {response.copied && (
-                  <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800">
-                    Previously Copied
+                  {response.grade && (
+                    <span className={`text-sm font-semibold ${getGradeColor(response.grade)}`}>
+                      Grade: {response.grade}
+                    </span>
+                  )}
+                  {response.copied && (
+                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800">
+                      Previously Copied
+                    </span>
+                  )}
+                  {!isExpanded && (
+                    <span className="text-xs text-gray-500 truncate max-w-md">
+                      {response.content.substring(0, 80)}...
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center space-x-2">
+                  <span className="text-xs text-gray-400">
+                    {formatTimestamp(response.created_at)}
                   </span>
-                )}
-              </div>
-              <div className="flex items-center space-x-2">
-                <button
-                  onClick={() => setPreviewMode(previewMode === response.id ? null : response.id)}
-                  className="text-xs text-gray-500 hover:text-gray-700"
-                >
-                  {previewMode === response.id ? 'Hide Preview' : 'Preview'}
-                </button>
-                <button
-                  onClick={() => loadResponseHistory(response.id)}
-                  className="text-xs text-gray-500 hover:text-gray-700"
-                >
-                  History
-                </button>
-                <span className="text-xs text-gray-400">
-                  {formatTimestamp(response.created_at)}
-                </span>
+                </div>
               </div>
             </div>
-          </div>
 
-          {/* Response Content */}
-          <div className="p-4">
+            {/* Response Content - Collapsible */}
+            {isExpanded && (
+              <div className="border-t">
+                <div className="p-4">
             {editingId === response.id ? (
               <div className="space-y-3">
                 <textarea
@@ -402,8 +422,11 @@ const ResponseManager: React.FC<ResponseManagerProps> = ({
               </div>
             </div>
           )}
-        </div>
-      ))}
+              </div>
+            )}
+          </div>
+        )
+      })}
     </div>
   )
 }

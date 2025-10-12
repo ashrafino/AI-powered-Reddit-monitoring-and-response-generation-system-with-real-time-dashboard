@@ -31,6 +31,7 @@ export default function Configs() {
   const [redditUsername, setRedditUsername] = useState("");
   const [isActive, setIsActive] = useState(true);
   const [editingId, setEditingId] = useState<number | null>(null);
+  const [autoScanOnCreate, setAutoScanOnCreate] = useState(true);
 
   // Scheduling state
   const [scanInterval, setScanInterval] = useState(5);
@@ -129,7 +130,19 @@ export default function Configs() {
       setRedditUsername("");
       setIsActive(true);
       mutate();
-      alert("Configuration created successfully!");
+      
+      // Trigger auto-scan if enabled
+      if (autoScanOnCreate) {
+        try {
+          await apiClient.post("/api/ops/scan");
+          alert("Configuration created successfully! Scan started in background.");
+        } catch (scanError) {
+          console.error("Auto-scan error:", scanError);
+          alert("Configuration created successfully! (Auto-scan failed - you can manually scan from the dashboard)");
+        }
+      } else {
+        alert("Configuration created successfully!");
+      }
     } catch (error) {
       console.error("Create config error:", error);
       if (error instanceof APIClientError) {
@@ -434,16 +447,35 @@ export default function Configs() {
             </div>
           </div>
 
-          <div className="flex items-center justify-between">
-            <label className="inline-flex items-center gap-2">
-              <input
-                type="checkbox"
-                checked={isActive}
-                onChange={(e) => setIsActive(e.target.checked)}
-                className="rounded"
-              />
-              <span className="text-sm font-medium">Configuration Active</span>
-            </label>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <label className="inline-flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={isActive}
+                  onChange={(e) => setIsActive(e.target.checked)}
+                  className="rounded"
+                />
+                <span className="text-sm font-medium">Configuration Active</span>
+              </label>
+            </div>
+
+            {!editingId && (
+              <div className="flex items-center justify-between">
+                <label className="inline-flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={autoScanOnCreate}
+                    onChange={(e) => setAutoScanOnCreate(e.target.checked)}
+                    className="rounded"
+                  />
+                  <span className="text-sm font-medium">Auto-scan after creating</span>
+                </label>
+                <span className="text-xs text-gray-500">
+                  Automatically trigger a scan when this config is created
+                </span>
+              </div>
+            )}
 
             {editingId ? (
               <div className="flex gap-2">

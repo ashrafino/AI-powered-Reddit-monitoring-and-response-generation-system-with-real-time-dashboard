@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react'
 interface FilterOptions {
   searchQuery: string
   subreddit: string
+  clientId: string
   scoreRange: [number, number]
   dateRange: string
   responseStatus: string
@@ -13,17 +14,20 @@ interface FilterOptions {
 interface SearchAndFilterProps {
   onFilterChange: (filters: FilterOptions) => void
   subreddits?: string[]
+  clients?: Array<{ id: number; name: string }>
   className?: string
 }
 
 const SearchAndFilter: React.FC<SearchAndFilterProps> = ({ 
   onFilterChange, 
   subreddits = [],
+  clients = [],
   className = ''
 }) => {
   const [filters, setFilters] = useState<FilterOptions>({
     searchQuery: '',
     subreddit: '',
+    clientId: '',
     scoreRange: [0, 100],
     dateRange: 'all',
     responseStatus: 'all',
@@ -39,6 +43,7 @@ const SearchAndFilter: React.FC<SearchAndFilterProps> = ({
     let count = 0
     if (filters.searchQuery) count++
     if (filters.subreddit) count++
+    if (filters.clientId) count++
     if (filters.scoreRange[0] > 0 || filters.scoreRange[1] < 100) count++
     if (filters.dateRange !== 'all') count++
     if (filters.responseStatus !== 'all') count++
@@ -58,6 +63,7 @@ const SearchAndFilter: React.FC<SearchAndFilterProps> = ({
     setFilters({
       searchQuery: '',
       subreddit: '',
+      clientId: '',
       scoreRange: [0, 100],
       dateRange: 'all',
       responseStatus: 'all',
@@ -152,7 +158,28 @@ const SearchAndFilter: React.FC<SearchAndFilterProps> = ({
       {/* Advanced Filters */}
       {isExpanded && (
         <div className="border-t bg-gray-50 p-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+            {/* Client Filter */}
+            {clients.length > 0 && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Client
+                </label>
+                <select
+                  value={filters.clientId}
+                  onChange={(e) => updateFilter('clientId', e.target.value)}
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value="">All Clients</option>
+                  {clients.map(client => (
+                    <option key={client.id} value={client.id}>
+                      {client.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
             {/* Subreddit Filter */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">

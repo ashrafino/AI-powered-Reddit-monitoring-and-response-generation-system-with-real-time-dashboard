@@ -128,7 +128,7 @@ async def generate_reddit_replies_with_research(
             "context_data": context_data,
             "research_enabled": enable_research,
             "generation_metadata": {
-                "model": "gpt-4o-mini",
+                "model": "ft:gpt-4o-mini-2024-07-18:180-marketing:wellbefore-reddit:CCgr05CY",
                 "research_quality": context_data.research_quality if context_data else 0.0,
                 "total_responses_generated": len(raw_suggestions),
                 "context_sources": len(context_data.sources) if context_data else 0
@@ -154,7 +154,7 @@ async def generate_reddit_replies_with_research(
             "context_data": context_data,
             "research_enabled": enable_research,
             "generation_metadata": {
-                "model": "gpt-4o-mini",
+                "model": "ft:gpt-4o-mini-2024-07-18:180-marketing:wellbefore-reddit:CCgr05CY",
                 "research_quality": context_data.research_quality if context_data else 0.0,
                 "total_responses_generated": 0,
                 "error": str(e)
@@ -205,7 +205,7 @@ def generate_reddit_replies(
 
     try:
         resp = client.chat.completions.create(
-            model="gpt-4o-mini",
+            model="ft:gpt-4o-mini-2024-07-18:180-marketing:wellbefore-reddit:CCgr05CY",
             messages=messages,
             n=1,
             temperature=0.8,

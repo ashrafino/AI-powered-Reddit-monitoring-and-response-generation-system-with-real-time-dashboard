@@ -27,6 +27,8 @@ function DashboardContent() {
   const { isAuthenticated, isLoading: authLoading, token, logout, error: authError } = useAuth()
   const [filteredPosts, setFilteredPosts] = useState<any[]>([])
   const [availableSubreddits, setAvailableSubreddits] = useState<string[]>([])
+  const [isScanning, setIsScanning] = useState(false)
+  const [scanStatus, setScanStatus] = useState<string>('')
   const router = useRouter()
   
   // Redirect to login if not authenticated
@@ -56,6 +58,15 @@ function DashboardContent() {
     }
   )
 
+  const { data: clients } = useSWR(
+    isAuthenticated ? '/api/clients' : null,
+    fetcher,
+    {
+      revalidateOnFocus: false,
+      errorRetryCount: 3
+    }
+  )
+
   // Extract available subreddits from posts
   useEffect(() => {
     if (posts && Array.isArray(posts)) {
@@ -79,6 +90,11 @@ function DashboardContent() {
         post.content?.toLowerCase().includes(query) ||
         post.keywords_matched?.toLowerCase().includes(query)
       )
+    }
+
+    // Client filter
+    if (filters.clientId) {
+      filtered = filtered.filter(post => post.client_id === parseInt(filters.clientId))
     }
 
     // Subreddit filter
@@ -210,20 +226,29 @@ function DashboardContent() {
 
 
   const scan = async () => {
+    setIsScanning(true)
+    setScanStatus('Starting scan...')
+    
     try {
       const result = await apiClient.post('/api/ops/scan') as any
       
       if (result?.method === 'celery') {
+        setScanStatus('Scan running in background...')
         alert('✓ Scan started!\n\nThe scan is running in the background.\nNew posts will appear in 30-60 seconds.\n\nRefresh the page to see results.')
         
         // Auto-refresh after 30 seconds
         setTimeout(() => {
           mutatePosts()
           mutateSummary()
+          setIsScanning(false)
+          setScanStatus('')
         }, 30000)
       } else if (result?.method === 'sync') {
         const posts = result.created_posts || 0
         const responses = result.created_responses || 0
+        
+        setScanStatus(`Found ${posts} posts, generated ${responses} responses`)
+        
         if (result.error) {
           alert(`⚠️ Scan completed with errors:\n${result.error}\n\nCreated: ${posts} posts, ${responses} responses`)
         } else {
@@ -234,14 +259,19 @@ function DashboardContent() {
         setTimeout(() => {
           mutatePosts()
           mutateSummary()
+          setIsScanning(false)
+          setScanStatus('')
         }, 1000)
       }
     } catch (error) {
       console.error('Scan error:', error)
+      setIsScanning(false)
+      setScanStatus('')
+      
       if (error instanceof APIClientError) {
-        alert(`Failed to start scan: ${error.message}`)
+        alert(`Failed to start scan: ${error.message}\n\nPossible issues:\n- No active configurations\n- Reddit API not configured\n- Backend service unavailable`)
       } else {
-        alert('Error starting scan. Check console for details.')
+        alert('Error starting scan.\n\nPlease check:\n1. You have at least one active configuration\n2. Reddit API credentials are set\n3. Backend service is running')
       }
     }
   }
@@ -316,6 +346,7 @@ function DashboardContent() {
         <SearchAndFilter 
           onFilterChange={handleFilterChange}
           subreddits={availableSubreddits}
+          clients={clients || []}
         />
       </div>
 
@@ -325,9 +356,24 @@ function DashboardContent() {
           <p className="text-sm text-gray-600">
             Showing {filteredPosts.length} of {(posts as any)?.length || 0} posts
           </p>
+          {scanStatus && (
+            <p className="text-xs text-blue-600 mt-1">
+              {scanStatus}
+            </p>
+          )}
         </div>
-        <button onClick={scan} className="px-3 py-2 rounded-md bg-black text-white hover:bg-gray-800 transition-colors">
-          Scan now
+        <button 
+          onClick={scan} 
+          disabled={isScanning}
+          className="px-3 py-2 rounded-md bg-black text-white hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+        >
+          {isScanning && (
+            <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+          )}
+          {isScanning ? 'Scanning...' : 'Scan now'}
         </button>
       </div>
       
@@ -367,11 +413,22 @@ function DashboardContent() {
             const redditUrl = p?.subreddit && p?.reddit_post_id
               ? `https://www.reddit.com/r/${p.subreddit}/comments/${p.reddit_post_id}`
               : (p?.url || '#')
+            const postDate = p.created_at ? new Date(p.created_at) : null
+            const formattedDate = postDate ? postDate.toLocaleDateString('en-US', { 
+              month: 'short', 
+              day: 'numeric', 
+              year: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit'
+            }) : 'Unknown date'
+            
             return (
               <div key={p.id} className="bg-white border rounded-xl p-4 shadow-sm">
                 <div className="flex items-start justify-between gap-3">
-                  <div className="text-sm text-gray-500">
+                  <div className="flex items-center gap-2 text-sm text-gray-500">
                     <span className="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-gray-700">r/{p.subreddit || 'unknown'}</span>
+                    <span className="text-xs text-gray-400">•</span>
+                    <span className="text-xs">{formattedDate}</span>
                   </div>
                   <a
                     href={redditUrl}
