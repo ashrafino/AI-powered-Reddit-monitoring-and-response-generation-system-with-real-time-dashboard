@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useWebSocket } from './WebSocketProvider'
+import { useAuth } from '../utils/authContext'
 
 interface MobileResponsiveLayoutProps {
   children: React.ReactNode
@@ -10,6 +11,7 @@ const MobileResponsiveLayout: React.FC<MobileResponsiveLayoutProps> = ({ childre
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
   const { isConnected, connectionHealth } = useWebSocket()
+  const { user } = useAuth()
 
   useEffect(() => {
     const checkMobile = () => {
@@ -64,12 +66,14 @@ const MobileResponsiveLayout: React.FC<MobileResponsiveLayoutProps> = ({ childre
               >
                 Configs
               </Link>
-              <Link 
-                className="text-gray-700 hover:text-black transition-colors" 
-                href="/clients"
-              >
-                Clients
-              </Link>
+              {user?.role === 'admin' && (
+                <Link 
+                  className="text-gray-700 hover:text-black transition-colors" 
+                  href="/clients"
+                >
+                  Clients
+                </Link>
+              )}
               <button 
                 onClick={logout} 
                 className="px-3 py-1 rounded-md border hover:bg-gray-50 transition-colors"
@@ -127,13 +131,15 @@ const MobileResponsiveLayout: React.FC<MobileResponsiveLayoutProps> = ({ childre
                 >
                   Configs
                 </Link>
-                <Link 
-                  className="text-gray-700 hover:text-black transition-colors py-2" 
-                  href="/clients"
-                  onClick={closeMobileMenu}
-                >
-                  Clients
-                </Link>
+                {user?.role === 'admin' && (
+                  <Link 
+                    className="text-gray-700 hover:text-black transition-colors py-2" 
+                    href="/clients"
+                    onClick={closeMobileMenu}
+                  >
+                    Clients
+                  </Link>
+                )}
                 <div className="pt-2 border-t">
                   <div className="flex items-center justify-between py-2">
                     <span className="text-sm text-gray-600">Connection Status</span>
