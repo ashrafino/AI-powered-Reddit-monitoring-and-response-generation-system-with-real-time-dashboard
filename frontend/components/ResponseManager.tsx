@@ -182,7 +182,25 @@ const ResponseManager: React.FC<ResponseManagerProps> = ({
   }
 
   const formatTimestamp = (timestamp: string) => {
-    return new Date(timestamp).toLocaleString()
+    if (!timestamp) return 'Unknown date'
+    
+    try {
+      const date = new Date(timestamp)
+      // Check if date is valid
+      if (isNaN(date.getTime())) {
+        return 'Unknown date'
+      }
+      
+      return date.toLocaleString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      })
+    } catch (error) {
+      return 'Unknown date'
+    }
   }
 
   const getScoreColor = (score: number) => {

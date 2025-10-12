@@ -413,14 +413,29 @@ function DashboardContent() {
             const redditUrl = p?.subreddit && p?.reddit_post_id
               ? `https://www.reddit.com/r/${p.subreddit}/comments/${p.reddit_post_id}`
               : (p?.url || '#')
-            const postDate = p.created_at ? new Date(p.created_at) : null
-            const formattedDate = postDate ? postDate.toLocaleDateString('en-US', { 
-              month: 'short', 
-              day: 'numeric', 
-              year: 'numeric',
-              hour: '2-digit',
-              minute: '2-digit'
-            }) : 'Unknown date'
+            const formatPostDate = (dateString: string) => {
+              if (!dateString) return 'Unknown date'
+              
+              try {
+                const date = new Date(dateString)
+                // Check if date is valid
+                if (isNaN(date.getTime())) {
+                  return 'Unknown date'
+                }
+                
+                return date.toLocaleString('en-US', {
+                  month: 'short',
+                  day: 'numeric',
+                  year: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit'
+                })
+              } catch (error) {
+                return 'Unknown date'
+              }
+            }
+            
+            const formattedDate = formatPostDate(p.created_at)
             
             return (
               <div key={p.id} className="bg-white border rounded-xl p-4 shadow-sm">
