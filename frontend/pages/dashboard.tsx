@@ -346,7 +346,7 @@ function DashboardContent() {
         <SearchAndFilter 
           onFilterChange={handleFilterChange}
           subreddits={availableSubreddits}
-          clients={clients || []}
+          clients={(Array.isArray(clients) ? clients : []) as Array<{id: number; name: string}>}
         />
       </div>
 
