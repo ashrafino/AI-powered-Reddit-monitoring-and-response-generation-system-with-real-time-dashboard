@@ -47,15 +47,7 @@ const MobileResponsiveLayout: React.FC<MobileResponsiveLayoutProps> = ({ childre
             <div className="flex items-center space-x-4">
               <div className="font-semibold text-lg">RedditBot</div>
               
-              {/* Connection Status Indicator */}
-              <div className="flex items-center space-x-2">
-                <div className={`w-2 h-2 rounded-full ${
-                  isConnected ? 'bg-green-500' : 'bg-red-500'
-                }`}></div>
-                <span className="text-xs text-gray-500 hidden sm:inline">
-                  {isConnected ? 'Connected' : 'Disconnected'}
-                </span>
-              </div>
+              {/* WebSocket status hidden - not used in production */}
             </div>
 
             {/* Desktop Navigation */}
@@ -71,6 +63,12 @@ const MobileResponsiveLayout: React.FC<MobileResponsiveLayoutProps> = ({ childre
                 href="/configs"
               >
                 Configs
+              </Link>
+              <Link 
+                className="text-gray-700 hover:text-black transition-colors" 
+                href="/clients"
+              >
+                Clients
               </Link>
               <button 
                 onClick={logout} 
@@ -129,17 +127,17 @@ const MobileResponsiveLayout: React.FC<MobileResponsiveLayoutProps> = ({ childre
                 >
                   Configs
                 </Link>
+                <Link 
+                  className="text-gray-700 hover:text-black transition-colors py-2" 
+                  href="/clients"
+                  onClick={closeMobileMenu}
+                >
+                  Clients
+                </Link>
                 <div className="pt-2 border-t">
                   <div className="flex items-center justify-between py-2">
                     <span className="text-sm text-gray-600">Connection Status</span>
-                    <div className="flex items-center space-x-2">
-                      <div className={`w-2 h-2 rounded-full ${
-                        isConnected ? 'bg-green-500' : 'bg-red-500'
-                      }`}></div>
-                      <span className="text-sm text-gray-600">
-                        {isConnected ? 'Connected' : 'Disconnected'}
-                      </span>
-                    </div>
+                    {/* WebSocket status hidden - not used in production */}
                   </div>
                   {connectionHealth?.latency_ms && (
                     <div className="text-xs text-gray-500 py-1">
