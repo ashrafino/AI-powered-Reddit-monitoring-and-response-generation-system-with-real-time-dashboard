@@ -328,7 +328,7 @@ function DashboardContent() {
         />
       )}
       
-      <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
+      <div className="grid gap-4 grid-cols-1 md:grid-cols-3">
         <div className="bg-white border rounded-xl p-4 shadow-sm">
           <div className="text-sm text-gray-500">Total Posts Found</div>
           <div className="text-2xl font-semibold">{(summary as any)?.posts ?? '—'}</div>
@@ -336,6 +336,32 @@ function DashboardContent() {
         <div className="bg-white border rounded-xl p-4 shadow-sm">
           <div className="text-sm text-gray-500">AI Responses Generated</div>
           <div className="text-2xl font-semibold">{(summary as any)?.responses ?? '—'}</div>
+        </div>
+        <div className="bg-white border rounded-xl p-4 shadow-sm">
+          <div className="text-sm text-gray-500 mb-2">Scanning Status</div>
+          <div className="flex items-center gap-2 mb-2">
+            <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+            <span className="text-sm font-medium">Active (Every 5 min)</span>
+          </div>
+          <div className="text-xs text-gray-600">
+            {configs && Array.isArray(configs) && configs.length > 0 ? (
+              <>
+                <div className="font-medium mb-1">Monitoring:</div>
+                {configs.filter((c: any) => c.is_active).map((cfg: any, idx: number) => (
+                  <div key={idx} className="mb-1">
+                    <div className="text-gray-700">
+                      r/{Array.isArray(cfg.reddit_subreddits) ? cfg.reddit_subreddits.join(', r/') : cfg.reddit_subreddits}
+                    </div>
+                    <div className="text-gray-500">
+                      Keywords: {Array.isArray(cfg.keywords) ? cfg.keywords.join(', ') : cfg.keywords}
+                    </div>
+                  </div>
+                ))}
+              </>
+            ) : (
+              <span className="text-gray-500">No active configs</span>
+            )}
+          </div>
         </div>
       </div>
 
