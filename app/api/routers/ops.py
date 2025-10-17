@@ -81,15 +81,29 @@ def run_scan_sync(db: Session):
                     except Exception as e:
                         logger.warning(f"Context fetching failed: {e}")
                     
-                    # Generate responses
+                    # Generate responses with subreddit guidelines
                     try:
-                        suggestions = generate_reddit_replies(post.title, context_text, num=3)
-                        for suggestion_data in suggestions:
+                        # Use async version with subreddit guidelines
+                        result = anyio.run(
+                            generate_reddit_replies_with_research,
+                            post.title,
+                            post.content or "",
+                            3,
+                            None,
+                            None,
+                            True,
+                            post.subreddit
+                        )
+                        
+                        for suggestion_data in result.get("responses", []):
                             resp = AIResponse(
                                 post_id=post.id,
                                 client_id=cfg.client_id,
                                 content=suggestion_data['content'],
                                 score=suggestion_data['score'],
+                                quality_breakdown=suggestion_data.get('quality_breakdown'),
+                                feedback=suggestion_data.get('feedback'),
+                                grade=suggestion_data.get('grade')
                             )
                             db.add(resp)
                             created_responses += 1

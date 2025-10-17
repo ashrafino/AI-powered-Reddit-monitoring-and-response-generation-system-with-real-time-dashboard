@@ -357,16 +357,6 @@ const ResponseManager: React.FC<ResponseManagerProps> = ({
                     >
                       {copyStatus[response.id] || 'Copy'}
                     </button>
-                    <button
-                      onClick={() => acknowledgeCompliance(response.id)}
-                      className={`px-3 py-1 text-sm rounded-md border ${
-                        response.compliance_ack 
-                          ? 'bg-green-50 text-green-700 border-green-200' 
-                          : 'hover:bg-gray-50'
-                      }`}
-                    >
-                      {response.compliance_ack ? 'Acknowledged' : 'Compliance Ack'}
-                    </button>
                   </div>
                   <div className="text-xs text-gray-500">
                     {response.content.length} chars

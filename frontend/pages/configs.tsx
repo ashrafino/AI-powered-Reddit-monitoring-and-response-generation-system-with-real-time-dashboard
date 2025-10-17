@@ -34,7 +34,7 @@ export default function Configs() {
   const [autoScanOnCreate, setAutoScanOnCreate] = useState(true);
 
   // Scheduling state
-  const [scanInterval, setScanInterval] = useState(5);
+  const [scanInterval, setScanInterval] = useState(360);
   const [scanStartHour, setScanStartHour] = useState(0);
   const [scanEndHour, setScanEndHour] = useState(23);
   const [scanDays, setScanDays] = useState([1, 2, 3, 4, 5, 6, 7]);
@@ -377,7 +377,7 @@ export default function Configs() {
                 <option value={30}>Every 30 minutes</option>
                 <option value={60}>Every hour</option>
                 <option value={180}>Every 3 hours</option>
-                <option value={360}>Every 6 hours</option>
+                <option value={360}>Every 6 hours (Recommended)</option>
                 <option value={720}>Every 12 hours</option>
                 <option value={1440}>Daily</option>
               </select>

@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Achraf El Bachra - Professional CV</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    /* Professional CV Styles */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      font-size: 16px;
+      line-height: 1.6;
+      color: #333;
+      background-color: #f8f9fa;
+      padding: 20px;
+    }
+
+    .cv-container {
+      max-width: 1000px;
+      margin: 0 auto;
+      background: #fff;
+      box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+      display: flex;
+      min-height: 297mm; /* A4 height */
+    }
+
+    /* Left sidebar for personal info */
+    .sidebar {
+      width: 35%;
+      background: #2c3e50;
+      color: #ecf0f1;
+      padding: 30px 25px;
+    }
+
+    .profile-img {
+      width: 150px;
+      height: 150px;
+      border-radius: 50%;
+      border: 5px solid #3498db;
+      margin: 0 auto 20px;
+      background-color: #bdc3c7;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 60px;
+      color: #7f8c8d;
+    }
+
+    .contact-info {
+      margin-top: 30px;
+    }
+
+    .contact-item {
+      display: flex;
+      align-items: flex-start;
+      margin-bottom: 15px;
+    }
+
+    .contact-item i {
+      width: 20px;
+      margin-right: 15px;
+      color: #3498db;
+      font-size: 18px;
+      padding-top: 3px;
+    }
+
+    .skills-section {
+      margin-top: 30px;
+    }
+
+    .skill-bar {
+      margin-bottom: 15px;
+    }
+
+    .skill-name {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 5px;
+    }
+
+    .skill-level {
+      height: 8px;
+      background: #7f8c8d;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .skill-progress {
+      height: 100%;
+      background: #3498db;
+    }
+
+    /* Main content area */
+    .main-content {
+      width: 65%;
+      padding: 40px 30px;
+    }
+
+    .section {
+      margin-bottom: 30px;
+    }
+
+    .section-title {
+      font-size: 24px;
+      color: #2c3e50;
+      border-bottom: 3px solid #3498db;
+      padding-bottom: 10px;
+      margin-bottom: 20px;
+      position: relative;
+    }
+
+    .section-title::after {
+      content: '';
+      position: absolute;
+      bottom: -3px;
+      left: 0;
+      width: 80px;
+      height: 3px;
+      background: #2c3e50;
+    }
+
+    .name {
+      font-size: 36px;
+      color: #2c3e50;
+      margin-bottom: 5px;
+    }
+
+    .title {
+      font-size: 20px;
+      color: #7f8c8d;
+      margin-bottom: 20px;
+    }
+
+    .summary {
+      font-size: 16px;
+      color: #555;
+      line-height: 1.7;
+      margin-bottom: 25px;
+    }
+
+    .timeline-item {
+      margin-bottom: 25px;
+      position: relative;
+      padding-left: 30px;
+    }
+
+    .timeline-item::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 8px;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #3498db;
+    }
+
+    .timeline-item::after {
+      content: '';
+      position: absolute;
+      left: 5px;
+      top: 25px;
+      width: 2px;
+      height: calc(100% + 5px);
+      background: #bdc3c7;
+    }
+
+    .timeline-item:last-child::after {
+      display: none;
+    }
+
+    .item-title {
+      font-weight: 600;
+      font-size: 18px;
+      color: #2c3e50;
+      margin-bottom: 5px;
+    }
+
+    .item-subtitle {
+      font-weight: 600;
+      color: #3498db;
+      margin-bottom: 8px;
+    }
+
+    .item-meta {
+      font-size: 14px;
+      color: #7f8c8d;
+      margin-bottom: 10px;
+      font-style: italic;
+    }
+
+    .item-description {
+      color: #555;
+      line-height: 1.7;
+    }
+
+    .skills-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .skill-tag {
+      background: #e1f0fa;
+      color: #2c3e50;
+      padding: 6px 15px;
+      border-radius: 20px;
+      font-size: 14px;
+    }
+
+    .languages-list, .interests-list {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 15px;
+    }
+
+    .language-item, .interest-item {
+      display: flex;
+      align-items: center;
+    }
+
+    .language-item i, .interest-item i {
+      color: #3498db;
+      margin-right: 10px;
+      width: 20px;
+    }
+
+    footer {
+      text-align: center;
+      padding: 20px;
+      color: #7f8c8d;
+      font-size: 14px;
+      border-top: 1px solid #eee;
+      margin-top: 20px;
+    }
+
+    /* Responsive design */
+    @media print {
+      body {
+        background: white;
+        padding: 0;
+      }
+      
+      .cv-container {
+        box-shadow: none;
+        margin: 0;
+      }
+    }
+
+    @media screen and (max-width: 768px) {
+      .cv-container {
+        flex-direction: column;
+      }
+      
+      .sidebar, .main-content {
+        width: 100%;
+      }
+      
+      .languages-list, .interests-list {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="cv-container">
+    <!-- Sidebar with personal info -->
+    <div class="sidebar">
+      <div class="profile-img">
+        <i class="fas fa-user"></i>
+      </div>
+      <h1 class="name">Achraf El Bachra</h1>
+      <p class="title">Computer Science Student</p>
+      
+      <div class="contact-info">
+        <div class="contact-item">
+          <i class="fas fa-map-marker-alt"></i>
+          <div>
+            <h3>Location</h3>
+            <p>Laâyoune, Morocco</p>
+          </div>
+        </div>
+        
+        <div class="contact-item">
+          <i class="fas fa-envelope"></i>
+          <div>
+            <h3>Email</h3>
+            <p>achraf.elbachra@example.com</p>
+          </div>
+        </div>
+        
+        <div class="contact-item">
+          <i class="fab fa-linkedin-in"></i>
+          <div>
+            <h3>LinkedIn</h3>
+            <p><a href="https://www.linkedin.com/in/achraf-el-bachra-8b4aa8139" target="_blank" style="color: #ecf0f1;">linkedin.com/in/achraf-el-bachra</a></p>
+          </div>
+        </div>
+      </div>
+      
+      <div class="skills-section">
+        <h2>Technical Skills</h2>
+        
+        <div class="skill-bar">
+          <div class="skill-name">
+            <span>Python</span>
+            <span>Expert</span>
+          </div>
+          <div class="skill-level">
+            <div class="skill-progress" style="width: 90%"></div>
+          </div>
+        </div>
+        
+        <div class="skill-bar">
+          <div class="skill-name">
+            <span>Machine Learning</span>
+            <span>Advanced</span>
+          </div>
+          <div class="skill-level">
+            <div class="skill-progress" style="width: 80%"></div>
+          </div>
+        </div>
+        
+        <div class="skill-bar">
+          <div class="skill-name">
+            <span>Web Development</span>
+            <span>Advanced</span>
+          </div>
+          <div class="skill-level">
+            <div class="skill-progress" style="width: 85%"></div>
+          </div>
+        </div>
+        
+        <div class="skill-bar">
+          <div class="skill-name">
+            <span>Database Management</span>
+            <span>Intermediate</span>
+          </div>
+          <div class="skill-level">
+            <div class="skill-progress" style="width: 70%"></div>
+          </div>
+        </div>
+        
+        <div class="skill-bar">
+          <div class="skill-name">
+            <span>Docker</span>
+            <span>Intermediate</span>
+          </div>
+          <div class="skill-level">
+            <div class="skill-progress" style="width: 75%"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Main content area -->
+    <div class="main-content">
+      <section class="section">
+        <h2 class="section-title">Professional Summary</h2>
+        <p class="summary">
+          Motivated computer science student with solid experience in developing practical projects including chatbots, web applications, and automation systems. 
+          Seeking to apply technical skills and team collaboration abilities in an enriching internship within an innovative company. 
+          Passionate about AI, web development, and automation technologies.
+        </p>
+      </section>
+      
+      <section class="section">
+        <h2 class="section-title">Education</h2>
+        
+        <div class="timeline-item">
+          <h3 class="item-title">Master in Computer Science</h3>
+          <div class="item-subtitle">Ibn Zohr University, Morocco</div>
+          <div class="item-meta">2023 - Present</div>
+        </div>
+        
+        <div class="timeline-item">
+          <h3 class="item-title">Bachelor in Computer Science</h3>
+          <div class="item-subtitle">Ibn Zohr University, Morocco</div>
+          <div class="item-meta">2020 - 2023</div>
+        </div>
+      </section>
+      
+      <section class="section">
+        <h2 class="section-title">Projects & Experience</h2>
+        
+        <div class="timeline-item">
+          <h3 class="item-title">Intelligent Legal Chatbot</h3>
+          <div class="item-subtitle">Development of an assistant capable of answering legal questions based on documents using RAG model</div>
+          <div class="item-meta">Personal Project</div>
+          <p class="item-description">
+            Developed an AI-powered legal assistant that uses Retrieval-Augmented Generation (RAG) to provide accurate answers 
+            to legal questions based on document analysis. Implemented using Python, LangChain, and vector databases.
+          </p>
+        </div>
+        
+        <div class="timeline-item">
+          <h3 class="item-title">Automated Reddit Bot</h3>
+          <div class="item-subtitle">Creation of bots for marketing automation (posting, commenting, upvoting) via Reddit API and Selenium</div>
+          <div class="item-meta">Personal Project</div>
+          <p class="item-description">
+            Built multiple automated bots for marketing purposes that interact with the Reddit platform through API integration 
+            and web scraping techniques. Implemented scheduling features and content generation algorithms.
+          </p>
+        </div>
+        
+        <div class="timeline-item">
+          <h3 class="item-title">Leave Management Web Application</h3>
+          <div class="item-subtitle">Complete digitization of paper-based absence management system</div>
+          <div class="item-meta">Academic Project</div>
+          <p class="item-description">
+            Developed a full-stack web application to digitize and streamline leave management processes. 
+            Features include user authentication, request submission, approval workflows, and reporting dashboards.
+          </p>
+        </div>
+        
+        <div class="timeline-item">
+          <h3 class="item-title">Raspberry Pi Tank Robot</h3>
+          <div class="item-subtitle">Remote control and sensor integration for autonomous navigation</div>
+          <div class="item-meta">Personal Project</div>
+          <p class="item-description">
+            Designed and built a remote-controlled tank robot using Raspberry Pi with integrated sensors for autonomous navigation. 
+            Implemented obstacle detection, path planning, and remote control via mobile application.
+          </p>
+        </div>
+      </section>
+      
+      <section class="section">
+        <h2 class="section-title">Certifications</h2>
+        
+        <div class="timeline-item">
+          <h3 class="item-title">Google Project Management</h3>
+          <div class="item-meta">Coursera</div>
+        </div>
+        
+        <div class="timeline-item">
+          <h3 class="item-title">IBM - Machine Learning with Python</h3>
+          <div class="item-meta">Coursera</div>
+        </div>
+        
+        <div class="timeline-item">
+          <h3 class="item-title">Meta - Programming in Python</h3>
+          <div class="item-meta">Coursera</div>
+        </div>
+        
+        <div class="timeline-item">
+          <h3 class="item-title">HackerRank - Frontend Developer (React)</h3>
+          <div class="item-meta">HackerRank</div>
+        </div>
+        
+        <div class="timeline-item">
+          <h3 class="item-title">Cisco - Network Security</h3>
+          <div class="item-meta">Cisco Networking Academy</div>
+        </div>
+      </section>
+      
+      <section class="section">
+        <h2 class="section-title">Languages</h2>
+        
+        <div class="languages-list">
+          <div class="language-item">
+            <i class="fas fa-circle"></i>
+            <div>
+              <h3>Arabic</h3>
+              <p>Native</p>
+            </div>
+          </div>
+          
+          <div class="language-item">
+            <i class="fas fa-circle"></i>
+            <div>
+              <h3>French</h3>
+              <p>Fluent</p>
+            </div>
+          </div>
+          
+          <div class="language-item">
+            <i class="fas fa-circle"></i>
+            <div>
+              <h3>English</h3>
+              <p>Upper Intermediate</p>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <section class="section">
+        <h2 class="section-title">Interests</h2>
+        
+        <div class="interests-list">
+          <div class="interest-item">
+            <i class="fas fa-book"></i>
+            <p>Arabic Literature</p>
+          </div>
+          
+          <div class="interest-item">
+            <i class="fas fa-chess"></i>
+            <p>Chess</p>
+          </div>
+          
+          <div class="interest-item">
+            <i class="fas fa-water"></i>
+            <p>Surfing & Travel</p>
+          </div>
+          
+          <div class="interest-item">
+            <i class="fas fa-microchip"></i>
+            <p>IoT & Robotics Projects</p>
+          </div>
+          
+          <div class="interest-item">
+            <i class="fas fa-users"></i>
+            <p>Public Speaking</p>
+          </div>
+        </div>
+      </section>
+      
+      <footer>
+        <p>© 2025 Achraf El Bachra - CV for Internship Application</p>
+      </footer>
+    </div>
+  </div>
+</body>
+</html>

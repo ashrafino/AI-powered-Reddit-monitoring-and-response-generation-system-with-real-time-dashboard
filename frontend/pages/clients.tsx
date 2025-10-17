@@ -1,9 +1,10 @@
 import useSWR from "swr";
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import Layout from "../components/Layout";
 import { useAuth } from "../utils/authContext";
 import { apiClient, APIClientError } from "../utils/apiBase";
+import { AuthErrorDisplay } from "../components/AuthErrorDisplay";
 
 const fetcher = async (url: string) => {
   try {
@@ -17,9 +18,13 @@ const fetcher = async (url: string) => {
 };
 
 export default function Clients() {
-  const { isAuthenticated, isLoading: authLoading, user } = useAuth();
-  const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
+  const {
+    isAuthenticated,
+    isLoading: authLoading,
+    error: authError,
+    user,
+  } = useAuth();
+  const [clientName, setClientName] = useState("");
   const router = useRouter();
 
   // Redirect to login if not authenticated
@@ -29,7 +34,7 @@ export default function Clients() {
     }
   }, [isAuthenticated, authLoading, router]);
 
-  // Redirect if not admin
+  // Redirect non-admins
   useEffect(() => {
     if (!authLoading && isAuthenticated && user?.role !== "admin") {
       router.replace("/dashboard");
@@ -47,19 +52,17 @@ export default function Clients() {
   });
 
   const createClient = async () => {
-    if (!name.trim()) {
+    if (!clientName.trim()) {
       alert("Please enter a client name");
       return;
     }
 
     try {
       await apiClient.post("/api/clients", {
-        name: name.trim(),
-        description: description.trim() || null,
+        name: clientName.trim(),
       });
 
-      setName("");
-      setDescription("");
+      setClientName("");
       mutate();
       alert("Client created successfully!");
     } catch (error) {
@@ -95,68 +98,58 @@ export default function Clients() {
     <Layout>
       <h2 className="text-lg font-semibold mb-3">Client Management</h2>
       <p className="text-sm text-gray-600 mb-6">
-        Manage clients for your Reddit monitoring system
+        Create and manage clients. Each client can have their own configurations and users.
       </p>
+
+      {/* Authentication Error Display */}
+      {authError && (
+        <AuthErrorDisplay
+          error={authError}
+          onLogin={() => router.push("/")}
+          className="mb-4"
+        />
+      )}
+
+      {/* Client Creation Error */}
+      {clientsError && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+          <p className="text-red-600">
+            Error loading clients: {clientsError.message}
+          </p>
+        </div>
+      )}
 
       {/* Create Client Form */}
       <div className="bg-white border rounded-xl p-4 shadow-sm mb-4">
         <h3 className="font-medium mb-3">Add New Client</h3>
-        <div className="grid gap-3">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Client Name <span className="text-red-500">*</span>
-            </label>
-            <input
-              className="w-full border rounded-md px-3 py-2"
-              placeholder="e.g., Acme Corporation"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-            />
-            <p className="text-xs text-gray-500 mt-1">
-              The name of the client or organization
-            </p>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Description (Optional)
-            </label>
-            <textarea
-              className="w-full border rounded-md px-3 py-2"
-              placeholder="Brief description of the client..."
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              rows={3}
-            />
-            <p className="text-xs text-gray-500 mt-1">
-              Additional information about this client
-            </p>
-          </div>
-
-          <div className="flex justify-end">
-            <button
-              className="px-4 py-2 rounded-md bg-black text-white hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
-              onClick={createClient}
-              disabled={!name.trim()}
-            >
-              Create Client
-            </button>
-          </div>
+        <div className="flex gap-3">
+          <input
+            className="flex-1 border rounded-md px-3 py-2"
+            placeholder="Enter client name (e.g., Acme Corp)"
+            value={clientName}
+            onChange={(e) => setClientName(e.target.value)}
+            onKeyPress={(e) => {
+              if (e.key === "Enter") {
+                createClient();
+              }
+            }}
+          />
+          <button
+            className="px-4 py-2 rounded-md bg-black text-white hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
+            onClick={createClient}
+            disabled={!clientName.trim()}
+          >
+            Create Client
+          </button>
         </div>
+        <p className="text-xs text-gray-500 mt-2">
+          Client names should be unique and descriptive
+        </p>
       </div>
 
       {/* Clients List */}
       <div className="bg-white border rounded-xl p-4 shadow-sm">
         <h3 className="font-medium mb-3">Existing Clients</h3>
-
-        {clientsError && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
-            <p className="text-red-600">
-              Error loading clients: {clientsError.message}
-            </p>
-          </div>
-        )}
-
         {!clients ? (
           <div className="text-center py-4">
             <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900 mx-auto"></div>
@@ -166,27 +159,29 @@ export default function Clients() {
           <div className="grid gap-3">
             {clients.map((client: any) => (
               <div key={client.id} className="border rounded-lg p-4">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <h4 className="font-medium text-lg">{client.name}</h4>
-                      <span className="text-xs text-gray-500">ID: {client.id}</span>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="font-medium text-lg">{client.name}</div>
+                    <div className="text-sm text-gray-500">
+                      ID: {client.id} • Slug: {client.slug}
                     </div>
-                    {client.description && (
-                      <p className="text-sm text-gray-600 mt-1">
-                        {client.description}
-                      </p>
+                    {client.created_at && (
+                      <div className="text-xs text-gray-400 mt-1">
+                        Created: {new Date(client.created_at).toLocaleDateString()}
+                      </div>
                     )}
-                    <div className="mt-2 text-xs text-gray-500">
-                      Slug: {client.slug}
-                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <span className="inline-flex items-center rounded-full bg-green-100 px-3 py-1 text-xs font-medium text-green-800">
+                      Active
+                    </span>
                   </div>
                 </div>
               </div>
             ))}
           </div>
         ) : (
-          <div className="text-center py-4 text-gray-600">
+          <div className="text-center py-8 text-gray-600">
             No clients yet. Create your first client above.
           </div>
         )}

@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.orm import Session
 from typing import List, Optional
+from pydantic import BaseModel
 import asyncio
 
 from app.api.deps import get_current_user_with_client
@@ -11,6 +12,9 @@ from app.services.openai_service import generate_reddit_replies_with_research
 from app.schemas.post import PostOut, ResponseOut
 
 router = APIRouter(prefix="/posts")
+
+class ResponseEditRequest(BaseModel):
+    content: str
 
 @router.get("/", response_model=List[PostOut])
 def list_posts(
@@ -64,12 +68,13 @@ async def generate_response_for_post(
         }
     
     try:
-        # Generate response with research
+        # Generate response with research and subreddit guidelines
         result = await generate_reddit_replies_with_research(
             post_title=post.title,
             post_content=post.content or "",
             num=3,
-            enable_research=True
+            enable_research=True,
+            subreddit=post.subreddit
         )
         
         if result["responses"]:
@@ -157,3 +162,28 @@ def acknowledge_compliance(
     db.commit()
     
     return {"status": "success", "message": "Compliance acknowledged"}
+
+@router.put("/responses/{response_id}/edit")
+def edit_response(
+    response_id: int,
+    payload: ResponseEditRequest,
+    db: Session = Depends(get_db),
+    user_client = Depends(get_current_user_with_client)
+):
+    """Edit a response content"""
+    user, user_client_id = user_client
+    
+    response = db.query(AIResponse).filter(AIResponse.id == response_id).first()
+    if not response:
+        raise HTTPException(status_code=404, detail="Response not found")
+    
+    # Check permissions
+    if user.role != "admin" and response.client_id != user_client_id:
+        raise HTTPException(status_code=403, detail="Access denied")
+    
+    # Update content
+    response.content = payload.content
+    db.commit()
+    db.refresh(response)
+    
+    return response

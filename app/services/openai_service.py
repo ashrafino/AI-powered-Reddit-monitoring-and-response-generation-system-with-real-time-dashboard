@@ -16,7 +16,8 @@ async def generate_reddit_replies_with_research(
     num: int = 3,
     brand_voice: Optional[str] = None,
     client_preferences: Optional[Dict] = None,
-    enable_research: bool = True
+    enable_research: bool = True,
+    subreddit: Optional[str] = None
 ) -> Dict:
     """
     Generate Reddit replies with context research, quality scoring and brand voice customization
@@ -51,6 +52,27 @@ async def generate_reddit_replies_with_research(
 
     context_data = None
     context_text = ""
+    subreddit_guidelines = ""
+    
+    # Fetch subreddit guidelines if provided
+    if subreddit:
+        try:
+            from app.services.reddit_service import get_subreddit_guidelines
+            guidelines_data = get_subreddit_guidelines(subreddit)
+            
+            if guidelines_data.get("rules"):
+                rules_text = "\n".join([
+                    f"- {rule['short_name']}: {rule['description']}" 
+                    for rule in guidelines_data["rules"]
+                ])
+                subreddit_guidelines = f"\n\nSubreddit r/{subreddit} Rules:\n{rules_text}"
+                
+                if guidelines_data.get("description"):
+                    subreddit_guidelines += f"\n\nSubreddit Description: {guidelines_data['description'][:500]}"
+                
+                logger.info(f"Loaded {len(guidelines_data['rules'])} rules for r/{subreddit}")
+        except Exception as e:
+            logger.warning(f"Failed to fetch subreddit guidelines: {e}")
     
     # Perform context research if enabled
     if enable_research:
@@ -65,8 +87,8 @@ async def generate_reddit_replies_with_research(
             logger.error(f"Context research failed: {e}")
             context_text = "Context research unavailable."
 
-    # Build system prompt with brand voice
-    system_prompt = build_system_prompt(brand_voice, client_preferences)
+    # Build system prompt with brand voice and subreddit guidelines
+    system_prompt = build_system_prompt(brand_voice, client_preferences, subreddit_guidelines)
     
     # Build user prompt with researched context
     full_prompt = f"{post_title}\n{post_content}".strip()
@@ -268,7 +290,7 @@ def generate_reddit_replies(
         ]
 
 
-def build_system_prompt(brand_voice: Optional[str] = None, client_preferences: Optional[Dict] = None) -> str:
+def build_system_prompt(brand_voice: Optional[str] = None, client_preferences: Optional[Dict] = None, subreddit_guidelines: Optional[str] = None) -> str:
     """Build customized system prompt based on brand voice and preferences"""
     
     base_prompt = """You are a helpful Reddit commenter who writes authentic, human-like responses. 
@@ -281,6 +303,9 @@ Key guidelines:
 - Keep responses concise but informative
 - Use personal experience when appropriate
 - Be respectful and inclusive"""
+
+    if subreddit_guidelines:
+        base_prompt += f"\n\n**IMPORTANT - Subreddit Compliance:**{subreddit_guidelines}\n\nYou MUST follow these subreddit rules in your responses. Ensure your comments comply with all listed rules."
 
     if brand_voice:
         base_prompt += f"\n\nBrand voice: {brand_voice}"

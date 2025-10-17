@@ -35,7 +35,7 @@ const SearchAndFilter: React.FC<SearchAndFilterProps> = ({
     sortOrder: 'desc'
   })
 
-  const [isExpanded, setIsExpanded] = useState(false)
+  const [isExpanded, setIsExpanded] = useState(true)
   const [activeFiltersCount, setActiveFiltersCount] = useState(0)
 
   // Update active filters count

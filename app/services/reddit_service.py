@@ -348,5 +348,54 @@ def test_reddit_connection() -> Dict[str, any]:
             "authenticated": False
         }
 
+@with_reddit_error_handling
+def get_subreddit_guidelines(subreddit_name: str) -> Dict[str, any]:
+    """Fetch subreddit rules and guidelines"""
+    reddit = get_reddit_client()
+    if not reddit:
+        logger.warning("Reddit client not available")
+        return {"rules": [], "description": "", "error": "Reddit client not configured"}
+    
+    try:
+        subreddit = reddit.subreddit(subreddit_name)
+        
+        # Get subreddit rules
+        rules = []
+        try:
+            for rule in subreddit.rules:
+                rules.append({
+                    "short_name": rule.short_name,
+                    "description": rule.description,
+                    "kind": rule.kind,
+                    "violation_reason": rule.violation_reason
+                })
+        except Exception as e:
+            logger.warning(f"Could not fetch rules for r/{subreddit_name}: {e}")
+        
+        # Get subreddit description/sidebar
+        description = ""
+        try:
+            description = subreddit.description or subreddit.public_description or ""
+        except Exception as e:
+            logger.warning(f"Could not fetch description for r/{subreddit_name}: {e}")
+        
+        return {
+            "subreddit": subreddit_name,
+            "rules": rules,
+            "description": description,
+            "display_name": subreddit.display_name,
+            "subscribers": getattr(subreddit, 'subscribers', 0)
+        }
+        
+    except praw.exceptions.Redirect:
+        logger.warning(f"Subreddit r/{subreddit_name} does not exist")
+        return {"rules": [], "description": "", "error": "Subreddit not found"}
+    except praw.exceptions.Forbidden:
+        logger.warning(f"Access forbidden to subreddit r/{subreddit_name}")
+        return {"rules": [], "description": "", "error": "Access forbidden"}
+    except Exception as e:
+        logger.error(f"Error fetching guidelines for r/{subreddit_name}: {e}")
+        return {"rules": [], "description": "", "error": str(e)}
+
 
 

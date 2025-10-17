@@ -16,6 +16,7 @@ export default function Layout({ children }: { children: ReactNode }) {
           <nav className="space-x-4 text-sm">
             <Link className="text-gray-700 hover:text-black" href="/dashboard">Dashboard</Link>
             <Link className="text-gray-700 hover:text-black" href="/configs">Configs</Link>
+            <Link className="text-gray-700 hover:text-black" href="/clients">Clients</Link>
             <button onClick={logout} className="ml-2 px-3 py-1 rounded-md border">Logout</button>
           </nav>
         </div>
