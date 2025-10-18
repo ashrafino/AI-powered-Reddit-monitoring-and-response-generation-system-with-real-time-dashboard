@@ -3,6 +3,7 @@ from app.api.deps import get_current_user, get_db
 from app.celery_app import celery_app
 from sqlalchemy.orm import Session
 import logging
+import anyio
 
 router = APIRouter(prefix="/ops")
 logger = logging.getLogger(__name__)
@@ -13,8 +14,7 @@ def run_scan_sync(db: Session):
     from app.models.post import MatchedPost, AIResponse
     from app.services.reddit_service import find_matching_posts, test_reddit_connection
     from app.services.context_service import fetch_google_results, fetch_youtube_results
-    from app.services.openai_service import generate_reddit_replies
-    import anyio
+    from app.services.openai_service import generate_reddit_replies, generate_reddit_replies_with_research
     
     created_posts = 0
     created_responses = 0
