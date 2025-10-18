@@ -15,7 +15,11 @@ echo "🚀 Starting deployment to $SERVER_IP..."
 echo "📋 Copying production environment file..."
 scp .env.production $SERVER_USER@$SERVER_IP:$PROJECT_PATH/.env
 
-# Step 2: SSH into server and run deployment commands
+# Step 2: Copy error fix script
+echo "📋 Copying error fix script..."
+scp fix-server-errors.sh $SERVER_USER@$SERVER_IP:$PROJECT_PATH/
+
+# Step 3: SSH into server and run deployment commands
 echo "🔧 Deploying on server..."
 ssh $SERVER_USER@$SERVER_IP << 'ENDSSH'
 cd /home/deploy/apps/reddit-bot
@@ -33,13 +37,14 @@ echo "🚀 Starting containers..."
 docker-compose up -d
 
 echo "⏳ Waiting for services to start..."
-sleep 10
+sleep 15
 
-echo "📊 Checking container status..."
+echo "🔍 Running error diagnostics..."
+chmod +x fix-server-errors.sh
+./fix-server-errors.sh
+
+echo "📊 Final container status..."
 docker-compose ps
-
-echo "📝 Showing recent logs..."
-docker-compose logs --tail=30
 
 echo "✅ Deployment complete!"
 ENDSSH
@@ -49,6 +54,9 @@ echo "✅ Deployment finished!"
 echo ""
 echo "🔍 To check logs, run:"
 echo "   ssh $SERVER_USER@$SERVER_IP 'cd $PROJECT_PATH && docker-compose logs -f'"
+echo ""
+echo "🔧 To run diagnostics, run:"
+echo "   ssh $SERVER_USER@$SERVER_IP 'cd $PROJECT_PATH && ./fix-server-errors.sh'"
 echo ""
 echo "🌐 Your app should be available at:"
 echo "   http://$SERVER_IP:3000"
