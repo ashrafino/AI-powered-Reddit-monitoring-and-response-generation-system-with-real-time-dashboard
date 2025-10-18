@@ -36,6 +36,17 @@ create_admin() {
     echo "Admin user created successfully"
 }
 
+# Function to create default client
+create_default_client() {
+    echo "Creating default client..."
+    python -m app.scripts.create_default_client
+    if [ $? -ne 0 ]; then
+        echo "Warning: Failed to create default client (may already exist)"
+    else
+        echo "Default client created successfully"
+    fi
+}
+
 # Wait for PostgreSQL
 wait_for_service postgres 5432 "PostgreSQL"
 
@@ -47,6 +58,9 @@ run_migrations
 
 # Create admin user
 create_admin
+
+# Create default client
+create_default_client
 
 # Start the application
 echo "Starting application..."
