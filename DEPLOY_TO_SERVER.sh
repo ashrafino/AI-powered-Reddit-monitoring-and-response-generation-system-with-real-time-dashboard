@@ -21,7 +21,7 @@ BACKEND_SERVICE="reddit-bot-backend"
 CELERY_SERVICE="reddit-bot-celery"
 
 echo -e "\n${YELLOW}Step 1: Navigating to application directory${NC}"
-cd $APP_DIR
+cd /home/deploy/apps/reddit-bot
 echo "✅ Current directory: $(pwd)"
 
 echo -e "\n${YELLOW}Step 2: Pulling latest changes from GitHub${NC}"
